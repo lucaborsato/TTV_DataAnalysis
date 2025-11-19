@@ -1,79 +1,50 @@
-#!/usr/bin/env python
-# coding: utf-8
-
+# %% [markdown]
 # # Data Analysis
 
+# %% [markdown]
 # #### Imports
 
-# In[1]:
-
-
+# %%
 import numpy as np
 import os
 import sys
 import pickle
 
-
-# In[2]:
-
-
+# %%
 os.environ["OMP_NUM_THREADS"] = "1"
 
-
-# In[3]:
-
-
+# %%
 from pytrades import pytrades
 from pytrades import constants as cst
 from pytrades import ancillary as anc
 from pytrades import plot_oc as poc
+from pytrades.convergence import log_probability_trace, full_statistics
 
-
-# In[4]:
-
-
+# %%
 import rebound
 
-
-# In[5]:
-
-
+# %%
 import ttvfast
 
-
-# In[6]:
-
-
+# %%
 from pytransit.utils import de as pyde
 
-
-# In[7]:
-
-
+# %%
 import emcee
 
-
-# In[8]:
-
-
+# %%
 from scipy.stats import norm, halfnorm, uniform
 
-
-# In[9]:
-
-
+# %%
 import nautilus
 
+# %%
+import pygtc
 
-# In[124]:
-
-
+# %%
 from multiprocessing import Pool
 
-
-# In[11]:
-
-
+# %%
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -84,7 +55,7 @@ for key, value in plt.rcParams.items():
     if "figsize" in key:
         print(key, value)
 
-
+# %% [markdown]
 # ## TOI-216 system  
 # Simulate a 2-planet system based on the parameters published in [McKee et al., 2023](https://ui.adsabs.harvard.edu/abs/2023AJ....165..236M/abstract)  
 # Planetary parameters at reference time $\mathrm{BJD_{TDB} - 2457000 = 1325.31$ days for TOI-216 b and TOI-216 c.  
@@ -99,9 +70,7 @@ for key, value in plt.rcParams.items():
 # longitudes of ascending nodes (`longn`)
 # in degrees.
 
-# In[12]:
-
-
+# %%
 body_names = ["star", "b", "c"]
 
 mass   = np.array([0.763, 0.0554*cst.Mjups, 0.525*cst.Mjups])
@@ -114,24 +83,19 @@ inc    = np.array([0.0, 88.554, 89.801])
 longn  = np.array([0.0, 0.0, -0.80])%360.0
 meana = (meanl-longn-argp) %360.0
 
-
+# %% [markdown]
 # ## TRADES  
 # ### Initialise the simulation  
 # Define some parameters needed for `pytrades` code and initialise the simulation
 
-# In[13]:
-
-
+# %%
 n_body = len(mass)
 duration_check = 1 # do computation of the transit duration
 t_epoch = 0.0 # reference time of integration
 t_start = 0.0 # start time of integration
 t_int   = 5000.0 # duration of integration
 
-
-# In[14]:
-
-
+# %%
 pytrades.args_init(
     n_body,
     duration_check,
@@ -144,13 +108,11 @@ pytrades.args_init(
     rv_res_gls=False, # use GLS method on RV residuals to avoid introduction of signals close to the planetary periods
 )
 
-
+# %% [markdown]
 # ### Integrates the orbits  
 # Integrates the orbits of the planets and obtains the times steps, state vector (position and velocity for all bodies for each time step), stability flag.
 
-# In[15]:
-
-
+# %%
 time_steps, orbits, stable = pytrades.kelements_to_orbits_full(
     t_epoch,
     t_start,
@@ -168,16 +130,14 @@ time_steps, orbits, stable = pytrades.kelements_to_orbits_full(
     n_steps_smaller_orbits=10.0,
 )
 
-
+# %% [markdown]
 # ### Plotting the orbits of the planets in the system  
 # Plot the orbits of the planets in the system in three projections:  
 # sky plane: $(X-Y)$  
 # orbit planet (observer on top): $(X-Z)$  
 # side orbit (observer on right side): $(Z-Y)$
 
-# In[16]:
-
-
+# %%
 fig= pytrades.base_plot_orbits(
     time_steps,
     orbits,
@@ -186,13 +146,13 @@ fig= pytrades.base_plot_orbits(
     body_names,
     figsize=(4, 4),
     sky_scale='star',
-    side_scale='star',
+    side_scale='positive',
     title="TOI-216 - trades",
     show_plot=True,
 )
 plt.close(fig)
 
-
+# %% [markdown]
 # ### Extracting transit times  
 # Let's extract transit times from the orbits.  
 # The function returns:  
@@ -202,9 +162,7 @@ plt.close(fig)
 # - `kep_elem` array of Keplerian orbital elements (period in days, semi-majoar axis in au, eccentricity, inclination, mean anomaly, argument of pericenter in degrees)  
 # - `body_flag` array of flag that identifies the body (2 for planet the first planet b, 3 for the second planet c), it needs to recover the transit times for different planets.
 
-# In[17]:
-
-
+# %%
 transiting_body = 1 # Set the transiting body to 1 (all planets)
 n_transits = [len(time_steps)-1]*(n_body-1) # prepare a list of the number of transits for each planet
 n_all_transits = np.sum(n_transits) # total number of transits for all the planets
@@ -213,12 +171,10 @@ transits, durations, lambda_rm, kep_elem, body_flag = pytrades.orbits_to_transit
     n_all_transits, time_steps, mass, radius, orbits, transiting_body
 )
 
-
+# %% [markdown]
 # Let's convert the array into a dictionary.
 
-# In[18]:
-
-
+# %%
 trades_transits = {}
 for pl_letter, pl_number in zip(body_names[1:], [2,3]):
     sel_pl = body_flag == pl_number
@@ -232,13 +188,11 @@ for pl_letter, pl_number in zip(body_names[1:], [2,3]):
         "kep_elem": kep_elem[sel_pl],
     }
 
-
+# %% [markdown]
 # ## REBOUND  
 # Computes the orbits with `rebound` packages, but get the transits with `trades` package.
 
-# In[19]:
-
-
+# %%
 def run_rebound(
     mass,
     radius,
@@ -293,10 +247,7 @@ def run_rebound(
 
     return orbits
 
-
-# In[20]:
-
-
+# %%
 orbits_rebound = run_rebound(
     mass,
     radius,
@@ -309,10 +260,7 @@ orbits_rebound = run_rebound(
     time_steps
 )
 
-
-# In[21]:
-
-
+# %%
 fig= pytrades.base_plot_orbits(
     time_steps,
     orbits_rebound,
@@ -327,21 +275,16 @@ fig= pytrades.base_plot_orbits(
 )
 plt.close(fig)
 
-
-# In[22]:
-
-
+# %%
 # Compute the transits, durations, lambda_rm, Kepler elements, and body flags
 transits_rebound, durations_rebound, lambda_rm_rebound, kep_elem_rebound, body_flag_rebound = pytrades.orbits_to_transits(
     n_all_transits, time_steps, mass, radius, orbits_rebound, transiting_body
 )
 
-
+# %% [markdown]
 # Let's convert the array into a dictionary.
 
-# In[23]:
-
-
+# %%
 rebound_transits = {}
 for pl_letter, pl_number in zip(body_names[1:], [2,3]):
     sel_pl = body_flag_rebound == pl_number
@@ -355,14 +298,12 @@ for pl_letter, pl_number in zip(body_names[1:], [2,3]):
         "kep_elem": kep_elem_rebound[sel_pl],
     }
 
-
+# %% [markdown]
 # ## TTVFast
 # Tring the `TTVFast` code by [Deck et al., 2014](https://ui.adsabs.harvard.edu/abs/2014ApJ...787..132D/abstract)  
 # available at [github@TTVFast](https://github.com/kdeck/TTVFast) and wrapped with [github@ttvfast-python](https://github.com/simonrw/ttvfast-python).  
 
-# In[24]:
-
-
+# %%
 planet_b = ttvfast.models.Planet(
     mass = mass[1],# mass: Mplanet in units of M_sun
     period = period[1],# period: Period in days
@@ -388,10 +329,7 @@ gravity = cst.Giau
 stellar_mass = mass[0]
 dt = np.min(np.diff(time_steps))
 
-
-# In[25]:
-
-
+# %%
 results = ttvfast.ttvfast(
     planets, 
     stellar_mass, 
@@ -402,10 +340,7 @@ results = ttvfast.ttvfast(
     input_flag=1 # 0 = Jacobi 1 = astrocentric elements 2 = astrocentric cartesian
 )
 
-
-# In[26]:
-
-
+# %%
 ttvfast_index, ttvfast_epoch, ttvfast_transits, _, _ = results["positions"]
 SEL_OK =  np.array(ttvfast_transits) > -2.0
 ttvfast_index = np.array(ttvfast_index)[SEL_OK]
@@ -413,15 +348,15 @@ ttvfast_epoch = np.array(ttvfast_epoch)[SEL_OK]
 ttvfast_transits = np.array(ttvfast_transits)[SEL_OK]
 
 
+# %% [markdown]
 # ## O-C diagram  
 # To visualise an O-C diagram, it has to be computed the transit number (epoch) of each transit with respect to a linear ephemeris.  
 # It is needed to define the functions that allows to compute the epoch and the linear ephemeris through the weighted least square method.
 
+# %% [markdown]
 # #### functions to compute the linear ephemerism
 
-# In[27]:
-
-
+# %%
 def compute_epoch(Tref, Pref, transit_times):
 
     dt = transit_times - Tref
@@ -429,10 +364,7 @@ def compute_epoch(Tref, Pref, transit_times):
 
     return epoch
 
-
-# In[28]:
-
-
+# %%
 # Based on Numerical Recipes
 
 # case without errors on transit times
@@ -533,12 +465,10 @@ def linear_ephemeris(T0s, eT0s=None, Tref_in = None, Pref_in = None, fit=False):
     
     return Tref, Pref, chi2, epoch, Tlin, oc
 
-
+# %% [markdown]
 # #### plot O-C
 
-# In[29]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -641,14 +571,12 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # As you can see the two codes reproduces the same orbits and $O-C$ diagrams for both planets.  
 # ## Parameters sensitivity
 # Let's change some parameters of planet c to see the effects on the TTV amplitude, phase and patterns.
 
-# In[30]:
-
-
+# %%
 def run_and_get_transits(
     t_e,
     t_s,
@@ -707,12 +635,10 @@ def run_and_get_transits(
 
     return ttt, ooo, stable, out_transits
 
-
+# %% [markdown]
 # #### test eccentricity variations
 
-# In[31]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -797,7 +723,7 @@ for itest, p_test in enumerate(par_c_test):
             mfc="None",
             mew=0.3,
             color="C{}".format(1+itest),
-            label="{} ecc = {:.2f}".format(pl_letter, p_test),
+            label="{} $e_\mathrm{{c}} = {:.2f}$".format(pl_letter, p_test),
             ls='',
         )
 
@@ -815,12 +741,10 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # #### test inclination variations
 
-# In[32]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -924,12 +848,10 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # #### test argument of pericentre variations
 
-# In[33]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -1035,12 +957,10 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # #### test mass variations
 
-# In[34]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -1152,15 +1072,13 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # ## Sythetic transit times
 # Let's select a number of transit times for both planets and add uncertainty.  
 # First, define a time range to mimic the observations and take a subset of the transits in this time range.  
 # Select transits from `TTVFast`, but the fit will be done with `trades`.  
 
-# In[35]:
-
-
+# %%
 time_sel_start = 0.0
 time_sel_end   = 365.25 * 5
 seed = 42
@@ -1170,12 +1088,10 @@ uncertainty = {
     "c": [0.0004, 0.0005, 0.0007, 0.0008, 0.0009, 0.001, 0.0011, 0.0015, 0.002, 0.003], # Dawson+ 2021
 }
 
-
+# %% [markdown]
 # ### Select transits
 
-# In[36]:
-
-
+# %%
 def select_transit_times(
     pl_letter, pl_idx, tra_index, tra_times, err_pool, 
     t1=0.0, t2=365.25, n_tra_syn=20, 
@@ -1228,12 +1144,10 @@ tra_syn_c, err_tra_syn_c, tra_syn_noisy_c = select_transit_times(
     seed=seed
 )
 
-
+# %% [markdown]
 # ### Compute linear ephemeris and plot O-C w errors
 
-# In[37]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -1376,12 +1290,10 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # ### Set default-common parameters for `TRADES`
 
-# In[38]:
-
-
+# %%
 # pytrades.args_init(
 #     n_body,
 #     duration_check,
@@ -1396,25 +1308,20 @@ plt.close(fig)
 
 transit_flag = [0, 1, 1] # 0 = not transiting (star), 1 transiting (b & c)
 
-
-# In[39]:
-
-
 # load transits into memory
 b_sources_id = np.ones(n_tra_syn_b).astype(int)
 pytrades.set_t0_dataset(2, epoch_b, tra_syn_noisy_b, err_tra_syn_b, sources_id=b_sources_id)
 c_sources_id = np.ones(n_tra_syn_c).astype(int)
 pytrades.set_t0_dataset(3, epoch_c, tra_syn_noisy_c, err_tra_syn_c, sources_id=c_sources_id)
 
-
+# %% [markdown]
 # ## TTV analysis with basic parameters
 
+# %% [markdown]
 # ### define fitting parameters  
 # Parameters as physical parameters, but masses as $M_\mathrm{p}/M_\star$
 
-# In[40]:
-
-
+# %%
 # this will be a global variable, it will not be passed to log-like/prob function
 fit_labels = [
     "M_b/M_star", 
@@ -1466,7 +1373,7 @@ fit_pars_test = [
     uniform.rvs(loc=fit_boundaries[i][0], scale=np.ptp(fit_boundaries[i])) for i in range(0, n_fit)
 ]
 
-
+# %% [markdown]
 # #### define functions to convert:  
 # - fitting parameters to physical
 # - check boundaries  
@@ -1474,9 +1381,7 @@ fit_pars_test = [
 # - computes the log-likelihood
 # - computes the log-prior, if needed  
 
-# In[41]:
-
-
+# %%
 def fitting_to_physical_params(fit_pars):
 
     m_x = np.zeros((n_body))
@@ -1516,10 +1421,7 @@ def fitting_to_physical_params(fit_pars):
     
     return m_x, r_x, p_x, e_x, w_x, ma_x, i_x, ln_x 
 
-
-# In[42]:
-
-
+# %%
 def check_fitting_boundaries(fit_pars):
 
     for ifit, ibound in enumerate(fit_boundaries):
@@ -1529,10 +1431,7 @@ def check_fitting_boundaries(fit_pars):
 
     return True
 
-
-# In[43]:
-
-
+# %%
 def fitting_to_observables(fit_pars):
 
     m_fit, r_fit, p_fit, e_fit, w_fit, ma_fit, i_fit, ln_fit = fitting_to_physical_params(fit_pars)
@@ -1597,7 +1496,7 @@ def fitting_to_observables_dict(fit_pars):
     
     return transits
 
-
+# %% [markdown]
 # MCMC algorithms and MAP optimization are concerned with the shape of the posterior distribution and finding its mode(s), 
 # not its absolute normalization.  
 # When you work with log-probabilities, 
@@ -1608,9 +1507,7 @@ def fitting_to_observables_dict(fit_pars):
 # It is mandatory to compute the log-prior for uniform priors in case of
 # Nested Sampling and/or Model selection (Bayes factor) analysis
 
-# In[44]:
-
-
+# %%
 ln_const = -0.5*(n_tra_syn_b+n_tra_syn_c)*np.log(2.0*np.pi) # let's compute this only once
 
 def log_boundaries(fit_pars):
@@ -1660,12 +1557,10 @@ def log_probability(fit_pars):
     lnP += ln_prior
     return lnP
 
-
+# %% [markdown]
 # #### test functions
 
-# In[45]:
-
-
+# %%
 print("fit_pars_initial")
 print(*fit_labels)
 print(*fit_pars_initial)
@@ -1692,10 +1587,7 @@ print("logP = ",lnP_0)
     stable_initial,
 ) = fitting_to_observables(fit_pars_initial)
 
-
-# In[46]:
-
-
+# %%
 print("fit_pars_test")
 print(*fit_labels)
 print(*fit_pars_test)
@@ -1722,12 +1614,10 @@ print("logP = ",lnP)
     stable_test,
     ) = fitting_to_observables(fit_pars_test)
 
-
+# %% [markdown]
 # #### plot tests
 
-# In[47]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -1856,15 +1746,14 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # ### Run a Differential Evolution (DE)  
 # with `pyDE` to search the parameter space
 
+# %% [markdown]
 # #### Define parameters for `pyDE`
 
-# In[48]:
-
-
+# %%
 # f: the difference amplification factor. Values of 0.5-0.8 are good in most cases.
 de_f = 0.5
 # c: The cross-over probability. Use 0.9 to test for fast convergence, and smaller values (~0.1) for a more elaborate search.
@@ -1892,13 +1781,11 @@ print(
     sep="\n"
 )
 
-
+# %% [markdown]
 # ### Single run of `pyDE`  
 # the output will be sent to `emcee`
 
-# In[49]:
-
-
+# %%
 skip_this = True
 if not skip_this:
     with Pool(n_threads) as pool:
@@ -1914,18 +1801,13 @@ if not skip_this:
         )
         de_obj.optimize(n_gen)
 
-
-# In[50]:
-
-
+# %%
 # np.shape(de_obj.population)  # n_pop x n_fit
 
-
+# %% [markdown]
 # ### run of `pyDE` as iterator, to save DE evolution
 
-# In[51]:
-
-
+# %%
 de_pop = np.zeros((n_gen, n_pop, n_fit))
 de_fitness = np.zeros((n_gen, n_pop)) - np.inf
 de_pop_best = np.zeros((n_gen, n_fit))
@@ -1962,31 +1844,23 @@ else:
     # pool.close()
     # # pool.terminate()
     # pool.join()
+if not load_de:
     # pickle.dump(de_obj, open('de_obj.pkl', 'wb'))
     pickle.dump(de_pop, open('de_pop.pkl', 'wb'))
     pickle.dump(de_fitness, open('de_fitness.pkl', 'wb'))
     pickle.dump(de_pop_best, open('de_pop_best.pkl', 'wb'))
     pickle.dump(de_fitness_best, open('de_fitness_best.pkl', 'wb'))
 
-
-# In[52]:
-
-
+# %%
 # np.shape(de_obj.population)  # n_pop x n_fit
 
-
-# In[53]:
-
-
+# %%
 fit_pars_de = de_pop_best[-1]
 for n, p, pd in zip(fit_labels, fit_pars_initial, fit_pars_de):
     print(n, p, pd)
 print("lnP", lnP_0, de_fitness_best[-1])
 
-
-# In[54]:
-
-
+# %%
 (
     body_flag_de,
     epo_de,
@@ -1997,12 +1871,10 @@ print("lnP", lnP_0, de_fitness_best[-1])
     stable_de,
 ) = fitting_to_observables(fit_pars_de)
 
-
+# %% [markdown]
 # #### plot `pyDE`
 
-# In[55]:
-
-
+# %%
 skip_this = False
 
 if not skip_this:
@@ -2032,10 +1904,7 @@ if not skip_this:
         plt.show()
         plt.close(fig)
 
-
-# In[56]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -2137,14 +2006,13 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # ### `pyDE` to `emcee`  
 
+# %% [markdown]
 # #### Define parameters for `emcee`  
 
-# In[57]:
-
-
+# %%
 n_walkers = n_pop # same as `pyde`
 n_steps = 1000
 thin_by = 10 # apply a thinning factor while running, it means that emcee will run for n_steps x thin_by, but it will keep/return only n_steps values
@@ -2170,48 +2038,46 @@ pka = {
     'position': 0
 }
 
-
+# %% [markdown]
 # #### run of `emcee`
 
-# In[58]:
-
+# %%
+backend_filename = os.path.join(os.path.abspath("./"), "sampler.hdf5")
 
 if load_emcee:
-    sampler = pickle.load(open('sampler.pkl', 'rb'))
+    sampler = emcee.backends.HDFBackend(backend_filename, read_only=True)
 else:
-    with Pool(n_threads) as pool:
+    backend = emcee.backends.HDFBackend(backend_filename, compression="gzip")
+    backend.reset(n_walkers, n_fit)
     
+    with Pool(n_threads) as pool:
         sampler = emcee.EnsembleSampler(
             n_walkers,
             n_fit,
             log_probability,
             pool=pool,
             moves=emcee_move,
+            backend=backend
         )
     
         sampler.run_mcmc(
             de_pop[-1, :, :], # last population of pyde
             n_steps,
             thin_by=thin_by,
+            store=True,
             tune=True,
             skip_initial_state_check=False,
             progress=True,
             progress_kwargs=pka
         )
-    pickle.dump(sampler, open('sampler.pkl', 'wb'))
 
-
+# %% [markdown]
 # #### statistics of `emcee` run
 
-# In[59]:
-
-
+# %%
 n_burnin = 400 # remove first n_burnin steps
 
-
-# In[60]:
-
-
+# %%
 full_chains = sampler.get_chain()
 full_chains_flat = sampler.get_chain(flat=True)
 post_chains = sampler.get_chain(discard=n_burnin)
@@ -2220,27 +2086,14 @@ full_lnprob = sampler.get_log_prob()
 full_lnprob_flat = sampler.get_log_prob(flat=True)
 post_lnprob = sampler.get_log_prob(discard=n_burnin)
 post_lnprob_flat = sampler.get_log_prob(discard=n_burnin, flat=True)
+n_post, _ = np.shape(post_chains_flat)
 
-
-# In[61]:
-
-
+# %%
 map_idx = np.argmax(post_lnprob_flat)
 map_lnprob = post_lnprob_flat[map_idx]
 map_pars = post_chains_flat[map_idx, :]
 
-
-# In[62]:
-
-
-n_post, _ = np.shape(post_chains_flat)
-n_samples = 33
-samples_pars = np.random.choice(n_post, n_samples, replace=False)
-
-
-# In[63]:
-
-
+# %%
 # credible intervals
 perc = np.array([68.27, 95.44, 99.74]) / 100.0
 for i in range(n_fit):
@@ -2288,20 +2141,13 @@ print("McKee values:")
 print("M_b = {:10.6f} +/- {:10.6f} Mearth".format(0.0554*cst.Mjups*cst.Msear, 0.0020*cst.Mjups*cst.Msear))
 print("M_c = {:10.6f} +/- {:10.6f} Mearth".format(0.525*cst.Mjups*cst.Msear, 0.019*cst.Mjups*cst.Msear))
 
-
+# %% [markdown]
 # Perfectly consistent!
 
+# %% [markdown]
 # #### trace plot
 
-# In[64]:
-
-
-from pytrades.convergence import log_probability_trace, full_statistics
-
-
-# In[65]:
-
-
+# %%
 # log-Probability
 # same but using `trades` function
 log_probability_trace(
@@ -2315,10 +2161,7 @@ log_probability_trace(
     olog=None,
 )
 
-
-# In[66]:
-
-
+# %%
 skip_this = False
 
 if not skip_this:
@@ -2338,14 +2181,10 @@ if not skip_this:
         figsize=(5, 5),
     )
 
-
+# %% [markdown]
 # #### corner plot
 
-# In[67]:
-
-
-import pygtc
-
+# %%
 ticklabel_size = 4
 label_separation = -1.1
 label_size = 6
@@ -2390,19 +2229,14 @@ for ax in axs:
 plt.show()
 plt.close(GTC)
 
-
+# %% [markdown]
 # #### O-C plot w/ samples  
 # Let's plot the O-C plot with the samples with shades at different credible intervals.
 
-# In[68]:
-
-
+# %%
 map_transits = fitting_to_observables_dict(map_pars)
 
-
-# In[69]:
-
-
+# %%
 (
     mass_map, 
     radius_map,
@@ -2422,10 +2256,7 @@ print("ma", *meana_map , "(", *meana, ")")
 print("i ", *inc_map   , "(", *inc, ")")
 print("ln", *longn_map , "(", *longn, ")")
 
-
-# In[70]:
-
-
+# %%
 t_int_syn = time_sel_end
 
 _, _, _, map_transits_full = run_and_get_transits(
@@ -2443,10 +2274,8 @@ _, _, _, map_transits_full = run_and_get_transits(
     body_names[1:],
 )
 
-
-# In[71]:
-
-
+# %%
+n_samples = 33
 smp_tra = {}
 smp_idx = np.random.choice(n_post, n_samples, replace=False)
 for ismp in smp_idx:
@@ -2477,10 +2306,7 @@ for ismp in smp_idx:
     )
     smp_tra[ismp] = smp_transits_full
 
-
-# In[72]:
-
-
+# %%
 fig = plt.figure(figsize=(5,5))
 fig.subplots_adjust(hspace=0.07, wspace=0.25)
 
@@ -2793,20 +2619,19 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # ## TTV analysis with reparameterisation
 
+# %% [markdown]
 # ### define fitting parameters  
 # Parameters as:  
-# - masses as $M_\star, \log_{10} M_\mathrm{b}/M_\star$ and $\log_{10} M_\mathrm{c}/M_\mathrm{c}$ (in $\log_{10}$ for better sampling small values)  
+# - masses as $M_\star, \log_{10} M_\mathrm{b}/M_\star$ and $\log_{10} M_\mathrm{c}/M_\mathrm{b}$ (in $\log_{10}$ for better sampling small values)  
 # - $(e, \omega) \rightarrow (\sqrt{e} \cos \omega, \sqrt{e} \sin \omega)$  
 # - $\mathcal{M} \rightarrow \lambda = \mathcal{M} + \omega + \Omega = $ mean longitude
 # 
 # In this test I will fit the mass of the star with a normal prior.
 
-# In[106]:
-
-
+# %%
 # this will be a global variable, it will not be passed to log-like/prob function
 fit_labels_repar = [
     "M_star",
@@ -2840,7 +2665,7 @@ fit_pars_initial_repar = [
 ]
 
 # let's define physical boundaries
-M_s_boundaries = [0.01, 3]
+M_s_boundaries = [0.01, 2.0]
 M_p_boundaries = [0.01*cst.Mjups, 1.0*cst.Mjups]
 ecc_boundaries = [0.0, 0.5]
 ang_boundaries = [0.0, 360.0]
@@ -2848,11 +2673,11 @@ ang_boundaries = [0.0, 360.0]
 # this will be a global variable, it will not be passed to log-like/prob function
 # using tight boundaries just for simplicity
 fit_boundaries_repar =[
-    [0.01, 3.0], # Msun
-    [-15, 0], # 10^-15, 1 as Mb/Ms
-    [-15, 3], # 10^-15, 1 as Mc/Mb
-    [period[1]-1.0, period[1]+1.0],
-    [period[2]-1.0, period[2]+1.0],
+    M_s_boundaries, # Msun
+    [-10, 0], # 10^-15, 1 as Mb/Ms
+    [-10, 3], # 10^-15, 1 as Mc/Mb
+    [period[1]-2.0, period[1]+2.0],
+    [period[2]-2.0, period[2]+2.0],
     [-np.sqrt(np.max(ecc_boundaries[1])), +np.sqrt(np.max(ecc_boundaries[1]))],
     [-np.sqrt(np.max(ecc_boundaries[1])), +np.sqrt(np.max(ecc_boundaries[1]))],
     [-np.sqrt(np.max(ecc_boundaries[1])), +np.sqrt(np.max(ecc_boundaries[1]))],
@@ -2874,7 +2699,7 @@ np.random.seed(seed=123456)
 # ]
 fit_pars_repar_test = fit_pars_initial_repar
 
-
+# %% [markdown]
 # #### define functions to convert:  
 # - fitting parameters to physical
 # - check boundaries  
@@ -2882,17 +2707,15 @@ fit_pars_repar_test = fit_pars_initial_repar
 # - computes the log-likelihood
 # - computes the log-prior, if needed  
 
-# In[107]:
-
-
+# %%
 def fitting_to_physical_params_repar(fit_pars):
 
     m_x = np.zeros((n_body))
     r_x = radius.copy() # fixed
-    p_x = m_x.copy()
-    e_x = m_x.copy()
-    w_x = m_x.copy()
-    ma_x = m_x.copy()
+    p_x = np.zeros((n_body))
+    e_x = np.zeros((n_body))
+    w_x = np.zeros((n_body))
+    ma_x = np.zeros((n_body))
     i_x = inc.copy() # fixed
     ln_x = longn.copy() # fixed
     
@@ -2916,17 +2739,14 @@ def fitting_to_physical_params_repar(fit_pars):
     e_x[2] = fit_pars[ifit]**2 + fit_pars[ifit+1]**2
     w_x[2] = (np.arctan2(fit_pars[ifit+1], fit_pars[ifit])*cst.rad2deg)%360.0
     
-    ifit += 1
+    ifit += 2
     ma_x[1] = (fit_pars[ifit] - w_x[1] - ln_x[1])%360.0
     ifit += 1
     ma_x[2] = (fit_pars[ifit] - w_x[2] - ln_x[2])%360.0
     
     return m_x, r_x, p_x, e_x, w_x, ma_x, i_x, ln_x 
 
-
-# In[108]:
-
-
+# %%
 def check_fitting_boundaries_repar(fit_pars):
 
     for ifit, ibound in enumerate(fit_boundaries_repar):
@@ -2936,22 +2756,10 @@ def check_fitting_boundaries_repar(fit_pars):
     
     return True
 
-
-# In[109]:
-
-
+# %%
 def fitting_to_observables_repar(fit_pars):
 
     m_fit, r_fit, p_fit, e_fit, w_fit, ma_fit, i_fit, ln_fit = fitting_to_physical_params_repar(fit_pars)
-    # print("physical to kelements")
-    # print("m_fit ", *m_fit)
-    # print("r_fit ", *r_fit)
-    # print("p_fit ", *p_fit)
-    # print("e_fit ", *e_fit)
-    # print("w_fit ", *w_fit)
-    # print("ma_fit", *ma_fit)
-    # print("i_fit ", *i_fit)
-    # print("ln_fit", *ln_fit)
     
     (
         body_flag_sim,
@@ -3013,7 +2821,7 @@ def fitting_to_observables_repar_dict(fit_pars):
     
     return transits
 
-
+# %% [markdown]
 # MCMC algorithms and MAP optimization are concerned with the shape of the posterior distribution and finding its mode(s), 
 # not its absolute normalization.  
 # When you work with log-probabilities, 
@@ -3024,9 +2832,7 @@ def fitting_to_observables_repar_dict(fit_pars):
 # It is mandatory to compute the log-prior for uniform priors in case of
 # Nested Sampling and/or Model selection (Bayes factor) analysis
 
-# In[112]:
-
-
+# %%
 ln_const = -0.5*(n_tra_syn_b+n_tra_syn_c)*np.log(2.0*np.pi) # let's compute this only once
 
 def log_boundaries_repar(fit_pars):
@@ -3093,18 +2899,16 @@ def log_probability_repar(fit_pars):
 
     ln_prior += log_priors_repar(fit_pars)
 
-    lnP = log_likelihood(fit_pars)
+    lnP = log_likelihood_repar(fit_pars)
     if np.isinf(lnP):
         return lnP
     lnP += ln_prior
     return lnP
 
-
+# %% [markdown]
 # #### plot tests
 
-# In[113]:
-
-
+# %%
 print("fit_pars_repar_test")
 print(*fit_labels_repar)
 print(*fit_pars_repar_test)
@@ -3132,15 +2936,14 @@ print("logP = ",lnP)
     ) = fitting_to_observables_repar(fit_pars_repar_test)
 print("Is it stable? {}".format(bool(stable_test)))
 
-
+# %% [markdown]
 # ### Run a Differential Evolution (DE)  
 # with `pyDE` to search the parameter space
 
+# %% [markdown]
 # #### Define parameters for `pyDE`
 
-# In[116]:
-
-
+# %%
 # f: the difference amplification factor. Values of 0.5-0.8 are good in most cases.
 de_f = 0.5
 # c: The cross-over probability. Use 0.9 to test for fast convergence, and smaller values (~0.1) for a more elaborate search.
@@ -3158,7 +2961,7 @@ seed = 42
 n_threads = min(n_pop // 1, len(os.sched_getaffinity(0))) # just a test, usually // 2 is ok
 # probably using newer version of python and os has the function os.process_cpu_count()
                 
-load_de = False
+load_de = True
 
 print(
     "number of the population = {}".format(n_pop),
@@ -3168,12 +2971,10 @@ print(
     sep="\n"
 )
 
-
+# %% [markdown]
 # ### run of `pyDE` as iterator, to save DE evolution
 
-# In[125]:
-
-
+# %%
 de_pop_repar = np.zeros((n_gen, n_pop, n_fit_repar))
 de_fitness_repar = np.zeros((n_gen, n_pop)) - np.inf
 de_pop_best_repar = np.zeros((n_gen, n_fit_repar))
@@ -3185,7 +2986,6 @@ if load_de:
     de_pop_best_repar = pickle.load(open('de_pop_best_repar.pkl', 'rb'))
     de_fitness_best_repar = pickle.load(open('de_fitness_best_repar.pkl', 'rb'))
 else:
-    # pool = Pool(n_threads)
     with Pool(n_threads) as pool_repar:
         de_obj_repar = pyde.DiffEvol(
             log_probability_repar,
@@ -3197,7 +2997,7 @@ else:
             maximize=de_fit_type,
             pool=pool_repar
         )
-        for iter_de, res_de in enumerate(de_obj(n_gen)):
+        for iter_de, res_de in enumerate(de_obj_repar(n_gen)):
             de_pop_repar[iter_de, :, :]    = de_obj_repar.population.copy()
             de_fitness_repar[iter_de, :]   = de_fit_type * de_obj_repar._fitness.copy()
             de_pop_best_repar[iter_de, :]  = de_obj_repar.minimum_location.copy()
@@ -3205,29 +3005,22 @@ else:
         
             if ((iter_de + 1) % iter_print) == 0:
                 print("Completed iter {:5d} / {:5d} ({:5.1f}%)".format(iter_de+1, n_gen, 100*(iter_de+1)/n_gen))
-        
-    # pool_repar.close()
-    # # pool_repar.terminate()
-    # pool_repar.join()
-    # pickle.dump(de_obj, open('de_obj.pkl', 'wb'))
+            # print("{:5d}/{:5d}".format(iter_de+1, n_gen), end='\r')
+
+# %%
+if not load_de:
     pickle.dump(de_pop_repar, open('de_pop_repar.pkl', 'wb'))
     pickle.dump(de_fitness_repar, open('de_fitness_repar.pkl', 'wb'))
     pickle.dump(de_pop_best_repar, open('de_pop_best_repar.pkl', 'wb'))
     pickle.dump(de_fitness_best_repar, open('de_fitness_best_repar.pkl', 'wb'))
 
-
-# In[ ]:
-
-
+# %%
 fit_pars_de_repar = de_pop_best_repar[-1]
 for n, p, pd in zip(fit_labels_repar, fit_pars_initial_repar, fit_pars_de_repar):
     print(n, p, pd)
 print("lnP", lnP_0, de_fitness_best_repar[-1])
 
-
-# In[ ]:
-
-
+# %%
 (
     body_flag_de,
     epo_de,
@@ -3238,12 +3031,10 @@ print("lnP", lnP_0, de_fitness_best_repar[-1])
     stable_de,
 ) = fitting_to_observables_repar(fit_pars_de_repar)
 
-
+# %% [markdown]
 # #### plot `pyDE`
 
-# In[ ]:
-
-
+# %%
 skip_this = False
 
 if not skip_this:
@@ -3253,7 +3044,7 @@ if not skip_this:
     for ifit in range(0,n_fit_repar):
     # ifit = 2
         fig = plt.figure(figsize=(5,3))
-        yy = de_pop[:,:,ifit].reshape((n_gen * n_pop))
+        yy = de_pop_repar[:,:,ifit].reshape((n_gen * n_pop))
         plt.scatter(
             xx,
             yy,
@@ -3266,17 +3057,14 @@ if not skip_this:
             linewidths=0.0,
         )
         plt.colorbar(label="fitness")
-        plt.ylabel(fit_labels[ifit])
+        plt.ylabel(fit_labels_repar[ifit])
         plt.xlabel("n_gen")
         
         plt.tight_layout()
         plt.show()
         plt.close(fig)
 
-
-# In[ ]:
-
-
+# %%
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(5,3))
 
 u = [1.0, "days"]
@@ -3378,19 +3166,18 @@ plt.show()
 
 plt.close(fig)
 
-
+# %% [markdown]
 # ### `pyDE` to `emcee`  
 
+# %% [markdown]
 # #### Define parameters for `emcee`  
 
-# In[ ]:
-
-
+# %%
 n_walkers = n_pop # same as `pyde`
 n_steps = 1000
 thin_by = 10 # apply a thinning factor while running, it means that emcee will run for n_steps x thin_by, but it will keep/return only n_steps values
 
-load_emcee = False
+load_emcee = True
 
 # define the move / sampling step
 # default is the Affine-Invariant Ensemble MCMC (A.I.E.M.):
@@ -3411,48 +3198,46 @@ pka = {
     'position': 0
 }
 
-
+# %% [markdown]
 # #### run of `emcee`
 
-# In[ ]:
-
+# %%
+backend_filename_repar = os.path.join(os.path.abspath("./"), "sampler_repar.hdf5")
 
 if load_emcee:
-    sampler_repar = pickle.load(open('sampler_repar.pkl', 'rb'))
+    sampler_repar = emcee.backends.HDFBackend(backend_filename_repar, read_only=True)
 else:
-    with Pool(n_threads) as pool:
+    backend_repar = emcee.backends.HDFBackend(backend_filename_repar, compression="gzip")
+    backend_repar.reset(n_walkers, n_fit_repar)
     
+    with Pool(n_threads) as pool:
         sampler_repar = emcee.EnsembleSampler(
             n_walkers,
             n_fit_repar,
             log_probability_repar,
             pool=pool,
             moves=emcee_move,
+            backend=backend_repar
         )
     
-        sampler.run_mcmc(
+        sampler_repar.run_mcmc(
             de_pop_repar[-1, :, :], # last population of pyde
             n_steps,
             thin_by=thin_by,
+            store=True,
             tune=True,
             skip_initial_state_check=False,
             progress=True,
             progress_kwargs=pka
         )
-    pickle.dump(sampler_repar, open('sampler_repar.pkl', 'wb'))
 
-
+# %% [markdown]
 # #### statistics of `emcee` run
 
-# In[ ]:
-
-
+# %%
 n_burnin = 400 # remove first n_burnin steps
 
-
-# In[ ]:
-
-
+# %%
 full_chains_repar = sampler_repar.get_chain()
 full_chains_flat_repar = sampler_repar.get_chain(flat=True)
 post_chains_repar = sampler_repar.get_chain(discard=n_burnin)
@@ -3461,33 +3246,20 @@ full_lnprob_repar = sampler_repar.get_log_prob()
 full_lnprob_flat_repar = sampler_repar.get_log_prob(flat=True)
 post_lnprob_repar = sampler_repar.get_log_prob(discard=n_burnin)
 post_lnprob_flat_repar = sampler_repar.get_log_prob(discard=n_burnin, flat=True)
+n_post, _ = np.shape(post_chains_flat_repar)
 
-
-# In[ ]:
-
-
+# %%
 map_idx_repar = np.argmax(post_lnprob_flat_repar)
 map_lnprob_repar = post_lnprob_flat_repar[map_idx_repar]
 map_pars_repar = post_chains_flat_repar[map_idx_repar, :]
 
-
-# In[ ]:
-
-
-n_post, _ = np.shape(post_chains_flat_repar)
-n_samples = 33
-samples_pars_repar = np.random.choice(n_post, n_samples, replace=False)
-
-
-# In[ ]:
-
-
+# %%
 # credible intervals
 perc = np.array([68.27, 95.44, 99.74]) / 100.0
 for i in range(n_fit):
     fitn, fitp, fitpost = fit_labels_repar[i], map_pars_repar[i], post_chains_flat_repar[:, i]
     credint = [anc.hpd(fitpost, c) for c in perc]
-    l = "{:12s}: MAP {:10.6f} ".format(fitn, fitp)
+    l = "{:18s}: MAP {:10.6f} ".format(fitn, fitp)
     for j, pc in enumerate(credint):
         l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
     print(l)
@@ -3495,47 +3267,95 @@ print()
 
 # conversion of parameters
 
-post_Ms_flat = post_chains_flat_repar[:, 0]
+post_Ms_flat_repar = post_chains_flat_repar[:, 0]
 
-post_l10Mb2s_flat = post_chains_flat_repar[:, 1]
-post_Mb_Me = 10**(post_l10Mb2s_flat) * post_Ms_flat * cst.Msear
-map_Mb_Me = post_Mb_Me[map_idx_repar]
+post_l10Mb2s_flat_repar = post_chains_flat_repar[:, 1]
+post_Mb_Me_repar = 10**(post_l10Mb2s_flat_repar) * post_Ms_flat_repar * cst.Msear
+map_Mb_Me_repar = post_Mb_Me_repar[map_idx_repar]
 
-credint = [anc.hpd(post_Mb_Me_noisy, c) for c in perc]
-l = "{:12s}: MAP {:10.6f} ".format("M_b", map_Mb_Me)
+credint = [anc.hpd(post_Mb_Me_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("M_b", map_Mb_Me_repar)
 for j, pc in enumerate(credint):
     l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
 print(l)
-err_Mb_Me = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+err_Mb_Me_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
 
-post_l10Mc2s_flat = post_chains_flat[:, 2]
-post_Mc_Me = 10**(post_Mc2s_flat) * post_Ms_flat * cst.Msear
-map_Mc_Me = post_Mc_Me[map_idx_repar]
+post_l10Mc2b_flat_repar = post_chains_flat_repar[:, 2]
+post_Mc_Me_repar = 10**(post_l10Mc2b_flat_repar) * post_Mb_Me_repar
+map_Mc_Me_repar = post_Mc_Me_repar[map_idx_repar]
 
-credint = [anc.hpd(post_Mc_Me_noisy, c) for c in perc]
-l = "{:12s}: MAP {:10.6f} ".format("M_c", map_Mc_Me)
+credint = [anc.hpd(post_Mc_Me_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("M_c", map_Mc_Me_repar)
 for j, pc in enumerate(credint):
     l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
 print(l)
-err_Mc_Me = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+err_Mc_Me_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+icw = fit_labels_repar.index("secosw_b")
+isw = icw + 1
+post_secw_b_flat_repar = post_chains_flat_repar[:, icw]
+post_sesw_b_flat_repar = post_chains_flat_repar[:, isw]
+post_ecc_b_flat_repar = post_secw_b_flat_repar**2 + post_sesw_b_flat_repar**2
+map_ecc_b_repar = post_ecc_b_flat_repar[map_idx_repar]
+
+credint = [anc.hpd(post_ecc_b_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("e_b", map_ecc_b_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_b_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+post_argp_b_flat_repar = np.arctan2(post_sesw_b_flat_repar, post_secw_b_flat_repar)*cst.rad2deg
+map_argp_b_repar = post_argp_b_flat_repar[map_idx_repar]
+
+credint = [anc.hpd(post_argp_b_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("w_b", map_argp_b_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_b_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+
+icw = fit_labels_repar.index("secosw_c")
+isw = icw + 1
+post_secw_c_flat_repar = post_chains_flat_repar[:, icw]
+post_sesw_c_flat_repar = post_chains_flat_repar[:, isw]
+post_ecc_c_flat_repar = post_secw_c_flat_repar**2 + post_sesw_c_flat_repar**2
+map_ecc_c_repar = post_ecc_c_flat_repar[map_idx_repar]
+
+credint = [anc.hpd(post_ecc_c_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("e_c", map_ecc_c_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_c_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+post_argp_c_flat_repar = np.arctan2(post_sesw_c_flat_repar, post_secw_c_flat_repar)*cst.rad2deg
+map_argp_c_repar = post_argp_c_flat_repar[map_idx_repar]
+
+credint = [anc.hpd(post_argp_c_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("w_c", map_argp_c_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_c_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
 
 print()
 print("This example:")
-print("M_b = {:10.6f} +/- {:10.6f} Mearth".format(map_Mb_Me, err_Mb_Me))
-print("M_c = {:10.6f} +/- {:10.6f} Mearth".format(map_Mc_Me, err_Mc_Me))
+print("M_b = {:10.6f} +/- {:10.6f} Mearth".format(map_Mb_Me_repar, err_Mb_Me_repar))
+print("M_c = {:10.6f} +/- {:10.6f} Mearth".format(map_Mc_Me_repar, err_Mc_Me_repar))
 
 print("McKee values:")
 print("M_b = {:10.6f} +/- {:10.6f} Mearth".format(0.0554*cst.Mjups*cst.Msear, 0.0020*cst.Mjups*cst.Msear))
 print("M_c = {:10.6f} +/- {:10.6f} Mearth".format(0.525*cst.Mjups*cst.Msear, 0.019*cst.Mjups*cst.Msear))
 
-
+# %% [markdown]
 # Perfectly consistent!
 
+# %% [markdown]
 # #### trace plot
 
-# In[ ]:
-
-
+# %%
 # log-Probability
 # same but using `trades` function
 log_probability_trace(
@@ -3549,10 +3369,7 @@ log_probability_trace(
     olog=None,
 )
 
-
-# In[ ]:
-
-
+# %%
 skip_this = False
 
 if not skip_this:
@@ -3572,14 +3389,10 @@ if not skip_this:
         figsize=(5, 5),
     )
 
-
+# %% [markdown]
 # #### corner plot
 
-# In[ ]:
-
-
-import pygtc
-
+# %%
 ticklabel_size = 4
 label_separation = -1.1
 label_size = 6
@@ -3610,12 +3423,12 @@ for ax in axs:
     )
     lb = ax.get_xlabel()
     if lb != "":
-        ax.xaxis.set_label_coords(0.5, label_separation)
+        ax.xaxis.set_label_coords(0.5, label_separation+0.1)
         ax.set_xlabel(lb, fontsize=label_size, rotation=45.0)
     
     lb = ax.get_ylabel()
     if lb != "":
-        ax.yaxis.set_label_coords(label_separation, 0.5)
+        ax.yaxis.set_label_coords(label_separation-0.5, 0.5)
         ax.set_ylabel(lb, fontsize=label_size, rotation=45.0)
 
     for axis in ['top', 'bottom', 'left', 'right']:
@@ -3624,19 +3437,14 @@ for ax in axs:
 plt.show()
 plt.close(GTC)
 
-
+# %% [markdown]
 # #### O-C plot w/ samples  
 # Let's plot the O-C plot with the samples with shades at different credible intervals.
 
-# In[ ]:
-
-
+# %%
 map_transits = fitting_to_observables_repar_dict(map_pars_repar)
 
-
-# In[ ]:
-
-
+# %%
 (
     mass_map, 
     radius_map,
@@ -3656,10 +3464,7 @@ print("ma", *meana_map , "(", *meana, ")")
 print("i ", *inc_map   , "(", *inc, ")")
 print("ln", *longn_map , "(", *longn, ")")
 
-
-# In[ ]:
-
-
+# %%
 t_int_syn = time_sel_end
 
 _, _, _, map_transits_full = run_and_get_transits(
@@ -3677,10 +3482,8 @@ _, _, _, map_transits_full = run_and_get_transits(
     body_names[1:],
 )
 
-
-# In[ ]:
-
-
+# %%
+n_samples = 33
 smp_tra = {}
 smp_idx = np.random.choice(n_post, n_samples, replace=False)
 for ismp in smp_idx:
@@ -3711,10 +3514,7 @@ for ismp in smp_idx:
     )
     smp_tra[ismp] = smp_transits_full
 
-
-# In[ ]:
-
-
+# %%
 fig = plt.figure(figsize=(5,5))
 fig.subplots_adjust(hspace=0.07, wspace=0.25)
 
@@ -4027,9 +3827,1032 @@ plt.show()
 
 plt.close(fig)
 
+# %% [markdown]
+# ### Check $P_\mathrm{b}$ hole in the posterior  
+# The posterior of $P_\mathrm{b}$ shows a hole in the distribution around 17.099 and 17.100.  
+# We would investigate this behavior, to determine the source of this issue.
 
-# In[ ]:
+# %%
+# Define a number of tests (simulations)
+n_test = 5
 
+test_fit = np.copy(map_pars_repar)
+# Define the range to investigate
+prange = [17.09938, 17.09957]
+# Create a vector of values to test
+pvalues = np.linspace(prange[0], prange[1], n_test, endpoint=True)
+
+stable_tests = np.zeros((n_test))
+
+test_orbits = []
+output = []
+
+for i in range(n_test):
+    idx = fit_labels_repar.index("P_b")
+    test_fit[idx] = pvalues[i]
+    print("\n====Test P_b = ", test_fit[idx], " (Pc/Pb = ",test_fit[idx+1]/test_fit[idx], ")")
+    (
+        mass_test, 
+        radius_test,
+        period_test, 
+        ecc_test, 
+        argp_test, 
+        meana_test,
+        inc_test,
+        longn_test,
+    ) = fitting_to_physical_params_repar(test_fit)
+    print("mass = ", mass_test)
+    # The next lines are to test the effect of the mass on the transit events
+    # mass_test[1:] /= 2.0
+    # print("mass = ", mass_test)
+    # test_fit[1] = np.log10(mass_test[1]/mass_test[0])
+    # test_fit[2] = np.log10(mass_test[2]/mass_test[1])
+    
+    print("period = ", period_test)
+
+    # Split the log-probability to check if there is a problem in the boundaries, priors, log-likelihood and posterior
+        
+    check_fit = check_fitting_boundaries_repar(test_fit)
+    print("Check fitting boundaries = ", check_fit)
+    
+    lnbd = log_boundaries_repar(test_fit)
+    print("Log boundaries = ", lnbd)
+    
+    lnpr = log_priors_repar(test_fit)
+    print("Log priors = ", lnpr)
+    
+    lnlo = log_likelihood_repar(test_fit)
+    print("Log likelihood = ", lnlo)
+    
+    ln_pr = lnbd + lnpr + lnlo
+    print("Log posterior = ", ln_pr)
+    
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        stable,
+    ) = fitting_to_observables_repar(test_fit)
+    print("Stable? ", bool(stable))
+    stable_tests[i] = stable
+    
+    test_orbits.append([mass_test, radius_test, period_test, ecc_test, argp_test, meana_test, inc_test, longn_test])
+    
+    tra_test = fitting_to_observables_repar_dict(test_fit)
+    output.append(tra_test)
+
+print("\n===== {:.2f}% tests are stable".format(100*np.sum(stable_tests)/n_test))
+
+# %%
+# Let's plot the residuals between the synthetic/observed transit times and the test ones
+
+lfont = 6
+tfont = 4
+
+zo_map = 10
+zo_obs = zo_map-1
+zo_mod = zo_obs -1
+zo_1s = zo_mod - 1
+zo_2s = zo_1s - 1
+zo_3s = zo_2s - 1
+
+cfsm = plt.get_cmap("gray")
+gval = 0.6
+dg = 0.1
+
+nrows = n_test # (2 + 1) * 2
+ncols = 1
+
+u = [1.0, "days"]
+markers = anc.filled_markers
+
+lbdown = [False] * (nrows-1) + [True]
+
+nspan=1
+
+# =================================================================
+i, pl_letter = 0, "b"
+print("planet {}".format(pl_letter))
+axs = []
+all_xlims = []
+
+fig = plt.figure(figsize=(5,5))
+fig.subplots_adjust(hspace=0.07, wspace=0.25)
+
+
+(Tref_b, Pref_b) = lineph_syn_noisy[pl_letter]
+
+all_tb = tra_syn_noisy_b
+
+for i, val in enumerate(output):
+    ax = plt.subplot2grid((nrows, ncols), (i, 0), rowspan=nspan)
+    poc.set_axis_default(ax, ticklabel_size=tfont, aspect="auto", labeldown=lbdown[i])
+    ax.set_ylabel("O-C ({:s}) - {} -".format(u[1], pl_letter), fontsize=lfont)
+    ax.axhline(0, color="k", lw=0.8)
+
+    tra_xxx = val[pl_letter]["transit_times"]
+    all_tb = np.column_stack((all_tb, tra_xxx))
+    epo_xxx = compute_epoch(Tref_b[0], Pref_b[0], tra_xxx)
+    tln_xxx = Tref_b[0] + epo_xxx*Pref_b[0]
+    oc_xxx = tra_xxx - tln_xxx
+    res = tra_syn_noisy_b - tra_xxx
+    ax.errorbar(
+        tra_syn_noisy_b,
+        res,
+        yerr=err_tra_syn_b,
+        marker=markers[0],
+        ms=2,
+        mec='None',
+        ls='',
+        elinewidth=0.5,
+        capsize=0,
+        label="P = {:.6f} days".format(pvalues[i])
+    )
+    ax.legend(loc='center left', bbox_to_anchor =(1.01, 0.5), fontsize=lfont, frameon=False)
+
+all_xlims.append(ax.get_xlim())
+
+axs.append(ax)
+
+all_xlims = np.concatenate(all_xlims)
+for ax in axs:
+    ax.set_xlim(np.min(all_xlims), np.max(all_xlims))
+
+axs[-1].set_xlabel("Time (days)")
+
+fig.align_ylabels(axs)
+
+plt.show()
+
+plt.close(fig)
+
+
+
+
+all_tc = tra_syn_noisy_c
+# =================================================================
+i, pl_letter = 1, "c"
+print("planet {}".format(pl_letter))
+axs = []
+all_xlims = []
+
+fig = plt.figure(figsize=(5,5))
+fig.subplots_adjust(hspace=0.07, wspace=0.25)
+
+(Tref_c, Pref_c) = lineph_syn_noisy[pl_letter]
+
+for i, val in enumerate(output):
+    ax = plt.subplot2grid((nrows, ncols), (i, 0), rowspan=nspan)
+    poc.set_axis_default(ax, ticklabel_size=tfont, aspect="auto", labeldown=lbdown[i])
+    ax.set_ylabel("O-C ({:s}) - {} -".format(u[1], pl_letter), fontsize=lfont)
+    ax.axhline(0, color="k", lw=0.8)
+    
+    tra_xxx = val[pl_letter]["transit_times"]
+    all_tc = np.column_stack((all_tc, tra_xxx))
+    epo_xxx = compute_epoch(Tref_c[0], Pref_c[0], tra_xxx)
+    tln_xxx = Tref_c[0] + epo_xxx*Pref_c[0]
+    oc_xxx = tra_xxx - tln_xxx
+    res = tra_syn_noisy_c - tra_xxx
+    ax.errorbar(
+        tra_syn_noisy_c,
+        res,
+        yerr=err_tra_syn_c,
+        marker=markers[1],
+        ms=2,
+        mec='None',
+        ls='',
+        elinewidth=0.5,
+        capsize=0,
+        label="P = {:.6f} days".format(pvalues[i])
+    )
+    ax.legend(loc='center left', bbox_to_anchor =(1.01, 0.5), fontsize=lfont, frameon=False)
+
+all_xlims.append(ax.get_xlim())
+
+axs.append(ax)
+
+all_xlims = np.concatenate(all_xlims)
+for ax in axs:
+    ax.set_xlim(np.min(all_xlims), np.max(all_xlims))
+
+axs[-1].set_xlabel("Time (days)")
+
+fig.align_ylabels(axs)
+
+plt.show()
+
+plt.close(fig)
+
+# %% [markdown]
+# Planet b shows a suddend value change of about 1000 days for the same transit time for three values of the period.  
+# From previous loop, we did not find any issue in stability, boundaries, but the log-likelihood assumes very low value for those three configurations.  
+# Let's check the transit times compute for all the tests (we already store the synthetic transit times and the test ones).
+
+# %%
+print("i synthetic ", *["test_{:d}".format(i) for i in range(n_test)])
+for it, t0s in enumerate(all_tb):
+    print(it, *t0s)
+
+# %% [markdown]
+# The tests with id 1, 2, and 3 have zero values for the transit with index 5.
+# Given that the configurations are stable, the parameters are within the fitting and physical boundaries,
+# a possible explanation is that the planet b is not transiting in those particular configurations.  
+# We can compute the orbits of each configuration and plot the orbits only for time range span by the synthetic observations.  
+
+# %%
+t0s_all = np.concatenate([tra_syn_noisy_b, tra_syn_noisy_c])
+tmin, tmax = t0s_all.min(), t0s_all.max()
+
+for i, (mass_test, radius_test, period_test, ecc_test, argp_test, meana_test, inc_test, longn_test) in enumerate(test_orbits):
+    print("\n\n ==== i = {} ====".format(i))
+    time_xxx, orbits_xxx, stable_xxx = pytrades.kelements_to_orbits_full(
+        t_epoch,
+        t_start,
+        t_int,
+        mass_test, radius_test, period_test, ecc_test, argp_test, meana_test, inc_test, longn_test,
+        specific_times=None,
+        step_size=1.0,
+        n_steps_smaller_orbits=None,
+    )
+    selected_orbits = np.logical_and(time_xxx >= tmin, time_xxx <= tmax)
+    fig= pytrades.base_plot_orbits(
+        time_xxx[selected_orbits],
+        orbits_xxx[selected_orbits],
+        radius_test,
+        n_body,
+        body_names,
+        figsize=(4, 4),
+        sky_scale='star',
+        side_scale= 'pos',
+        title="Pb = {:.5f} days".format(period_test[1]),
+        show_plot=True,
+    )
+    plt.close(fig)
+
+# %% [markdown]
+# A quick view of the orbits and different projections would suggest that planet b in some specific configurations,  
+# as for the values of the period of the range 17.099 and 17.100 days, is not transiting.  
+# Hence, the code is returning a zero value for that transit.  
+
+# %% [markdown]
+# ## TTV analysis with Nested Sampling  
+
+# %% [markdown]
+# ### define priors  
+# In this case, we will use the reparametization of masses, eccentricity, argument of pericenter and mean longitude.  
+# However, we will re-define the priors in a slighty different way.
+
+# %%
+priors_nautilus = nautilus.Prior()
+for ilab, lab in enumerate(fit_labels_repar):
+    priors_nautilus.add_parameter(lab, dist=priors_repar[ilab])
+
+boundaries_physical = [
+    M_s_boundaries,
+    M_p_boundaries,
+    ecc_boundaries,
+]
+
+priors_physical = nautilus.Prior()
+priors_physical.add_parameter("M_star", dist=uniform(loc=M_s_boundaries[0], scale=np.ptp(M_s_boundaries)))
+priors_physical.add_parameter("M_b", dist=uniform(loc=M_p_boundaries[0], scale=np.ptp(M_p_boundaries)))
+priors_physical.add_parameter("M_c", dist=uniform(loc=M_p_boundaries[0], scale=np.ptp(M_p_boundaries)))
+priors_physical.add_parameter("ecc_b", dist=uniform(loc=ecc_boundaries[0], scale=np.ptp(ecc_boundaries)))
+priors_physical.add_parameter("ecc_c", dist=uniform(loc=ecc_boundaries[0], scale=np.ptp(ecc_boundaries)))
+
+# %% [markdown]
+# #### define functions to convert:  
+# - computes priors, if needed  
+# - computes the log-likelihood
+# - computes the log-prior, if needed  
+
+# %% [markdown]
+# MCMC algorithms and MAP optimization are concerned with the shape of the posterior distribution and finding its mode(s), 
+# not its absolute normalization.  
+# When you work with log-probabilities, 
+# adding a constant term to the log-posterior does not change the location of the maximum or 
+# the relative probabilities between different points in parameter space.  
+# So, in case of emcee the uniform priors (ln P(\theta) = ln ( 1 / (max - min) )) can be discarded,
+# and only Normal-Gaussian (or other types) prios can be computed in log-Probability.  
+# It is mandatory to compute the log-prior for uniform priors in case of
+# Nested Sampling and/or Model selection (Bayes factor) analysis
+
+# %%
+def log_boundaries_nautilus_repar(fit_dict):
+
+    fit_pars = np.array(list(fit_dict.values()))
+    
+    m_x, r_x, p_x, e_x, w_x, ma_x, i_x, ln_x = fitting_to_physical_params_repar(fit_pars)
+    phys = {
+        "M_star":m_x[0],
+        "M_b":m_x[1],
+        "M_c":m_x[2],
+        "ecc_b":e_x[1],
+        "ecc_c":e_x[2],
+    }
+
+    for k, v in phys.items():
+        lnphy = priors_physical.dists[priors_physical.keys.index(k)].logpdf(v)
+        if np.isinf(lnphy):
+            return -np.inf
+    return 0.0
+
+def log_priors_nautulis_repar(fit_dict): # this can be extended for uniform priors when using Nested Sampling
+
+    ln_prior = np.sum(
+        [
+            priors_nautilus.dists[priors_nautilus.keys.index(k)].logpdf(p) for k, p in fit_dict.items()
+        ]
+    )
+    return ln_prior
+                      
+def log_likelihood_nautilus_repar(fit_dict):
+
+    ln_prior = log_boundaries_nautilus_repar(fit_dict)
+    if np.isinf(ln_prior):
+        return ln_prior
+    
+    lnL = ln_const + ln_prior
+    fit_pars = np.array(list(fit_dict.values()))
+    (
+        body_flag_sim,
+        epo_sim,
+        transits_sim,
+        durations_sim,
+        lambda_rm_sim,
+        kep_elem_sim,
+        stable,
+    ) = fitting_to_observables_repar(fit_pars)
+    if not stable:
+        return -np.inf
+
+    res_b = tra_syn_noisy_b - transits_sim[body_flag_sim ==2]
+    wres_b = res_b / err_tra_syn_b
+    lnL_b = -0.5*np.sum(np.log(err_tra_syn_b)) - 0.5*np.sum(wres_b*wres_b)
+    
+    res_c = tra_syn_noisy_c - transits_sim[body_flag_sim ==3]
+    wres_c = res_c / err_tra_syn_c
+    lnL_c = -0.5*np.sum(np.log(err_tra_syn_c)) - 0.5*np.sum(wres_c*wres_c)
+    
+    lnL += lnL_b + lnL_c
+    
+    return lnL
+
+# %%
+fit_dict_pars = {k:p for k, p in zip(fit_labels_repar, fit_pars_repar_test)}
+m_fit, r_fit, p_fit, e_fit, w_fit, ma_fit, i_fit, ln_fit = fitting_to_physical_params_repar(fit_pars_repar_test)
+print("mass (Msun)    = ",*m_fit)
+print("radius (Rsun)  = ",*r_fit)
+print("period (days)  = ",*p_fit)
+print("ecc            = ",*e_fit)
+print("arg. peri. (°) = ",*w_fit)
+print("mean anom. (°) = ",*ma_fit)
+print("inc (°)        = ",*i_fit)
+print("long. node (°) = ",*ln_fit)
+ln_prior = log_priors_nautulis_repar(fit_dict_pars)
+print("ln-priors = ",ln_prior)
+ln_bound = log_boundaries_nautilus_repar(fit_dict_pars)
+print("ln-bounds = ", ln_bound)
+lnL = log_likelihood_nautilus_repar(fit_dict_pars)
+print("logL = ",lnL)
+lnP = lnL + ln_prior + ln_bound
+print("lnP = ",lnP)
+(
+    body_flag_test,
+    epo_test,
+    transits_test,
+    _,
+    _,
+    _,
+    stable_test,
+    ) = fitting_to_observables_repar(fit_pars_repar_test)
+print("Is it stable? {}".format(bool(stable_test)))
+
+# %% [markdown]
+# ### `nautilus`
+
+# %%
+n_live = 3000
+n_threads = 100
+seed = 42578
+delete_file = True
+resume = True
+nautilus_filename = os.path.join(os.path.abspath("."), "sampler_nautilus.hdf5")
+if delete_file:
+    if os.path.exists(nautilus_filename):
+        os.remove(nautilus_filename)
+
+# %%
+sampler_nautilus = nautilus.Sampler(
+    # log_priors_nautulis_repar,
+    priors_nautilus,
+    log_likelihood_nautilus_repar,
+    # likelihood_args=[fit_boundaries_repar, boundaries_physical],
+    n_dim=n_fit_repar,
+    n_live=n_live,
+    vectorized=False,
+    pass_dict=True,
+    pool=n_threads,
+    seed=seed,
+    filepath=nautilus_filename,
+    resume=resume,
+)
+
+# %%
+sampler_nautilus.run(discard_exploration=True, verbose=True)
+
+# %%
+log_z = sampler_nautilus.log_z
+n_eff = sampler_nautilus.n_eff
+points, log_w, log_l = sampler_nautilus.posterior()
+
+# %%
+print("log_Z = {:.4f} +/- {:.4f}".format(log_z, 1.0/np.sqrt(n_eff)))
+print("N_eff = {:.0f}".format(n_eff))
+
+# %%
+def compute_log_prior_nautilus(pars, labels):
+    pars_dict = {lab:val for lab, val in zip(labels, pars)}
+    ln_prior = log_priors_nautulis_repar(pars_dict)
+    return ln_prior
+
+n_calls, _ = np.shape(points)
+log_priors_nau, log_prob_nau = np.zeros(n_calls), np.zeros(n_calls)
+for icall in range(n_calls):
+    log_priors_nau[icall] = compute_log_prior_nautilus(points[icall], fit_labels_repar)
+    log_prob_nau[icall] = log_l[icall] + log_priors_nau[icall]
+
+# %%
+weights = np.exp(log_w)
+sel_w = weights > 0.0
+pos_points = points[sel_w, :]
+pos_weights = weights[sel_w]
+pos_log_like = log_l[sel_w]
+pos_log_prior = log_priors_nau[sel_w]
+pos_log_prob = log_prob_nau[sel_w]
+n_nautilus = len(pos_weights)
+print("posterior size n_nautilus = ", n_nautilus)
+
+# %%
+idx_mle_nautilus = np.argmax(pos_log_like)
+mle_points = pos_points[idx_mle_nautilus, :]
+mle_fit_dict = {lab:val for lab, val in zip(fit_labels_repar, mle_points)}
+
+# %%
+idx_map_nautilus = np.argmax(pos_log_prob)
+map_points = pos_points[idx_map_nautilus, :]
+map_fit_dict = {lab:val for lab, val in zip(fit_labels_repar, map_points)}
+
+# %%
+for n, mle in mle_fit_dict.items():
+    print(n, mle, map_fit_dict[n])
+print("lnL", pos_log_like[idx_mle_nautilus], pos_log_like[idx_map_nautilus])
+print("lnP", pos_log_prob[idx_mle_nautilus], pos_log_prob[idx_map_nautilus])
+
+# %% [markdown]
+# #### Statistics of `nautilus` posterior
+
+# %%
+# credible intervals
+perc = np.array([68.27, 95.44, 99.74]) / 100.0
+for i in range(n_fit):
+    fitn, fitp, fitpost = fit_labels_repar[i], map_points[i], pos_points[:, i]
+    credint = [anc.hpd(fitpost, c) for c in perc]
+    l = "{:18s}: MAP {:10.6f} ".format(fitn, fitp)
+    for j, pc in enumerate(credint):
+        l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+    print(l)
+print()
+
+# conversion of parameters
+
+post_Ms_flat_repar = pos_points[:, 0]
+
+post_l10Mb2s_flat_repar = pos_points[:, 1]
+post_Mb_Me_repar = 10**(post_l10Mb2s_flat_repar) * post_Ms_flat_repar * cst.Msear
+map_Mb_Me_repar = post_Mb_Me_repar[idx_map_nautilus]
+
+credint = [anc.hpd(post_Mb_Me_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("M_b", map_Mb_Me_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_Mb_Me_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+post_l10Mc2b_flat_repar = pos_points[:, 2]
+post_Mc_Me_repar = 10**(post_l10Mc2b_flat_repar) * post_Mb_Me_repar
+map_Mc_Me_repar = post_Mc_Me_repar[idx_map_nautilus]
+
+credint = [anc.hpd(post_Mc_Me_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("M_c", map_Mc_Me_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_Mc_Me_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+icw = fit_labels_repar.index("secosw_b")
+isw = icw + 1
+post_secw_b_flat_repar = pos_points[:, icw]
+post_sesw_b_flat_repar = pos_points[:, isw]
+post_ecc_b_flat_repar = post_secw_b_flat_repar**2 + post_sesw_b_flat_repar**2
+map_ecc_b_repar = post_ecc_b_flat_repar[idx_map_nautilus]
+
+credint = [anc.hpd(post_ecc_b_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("e_b", map_ecc_b_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_b_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+post_argp_b_flat_repar = np.arctan2(post_sesw_b_flat_repar, post_secw_b_flat_repar)*cst.rad2deg
+map_argp_b_repar = post_argp_b_flat_repar[idx_map_nautilus]
+
+credint = [anc.hpd(post_argp_b_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("w_b", map_argp_b_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_b_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+
+icw = fit_labels_repar.index("secosw_c")
+isw = icw + 1
+post_secw_c_flat_repar = pos_points[:, icw]
+post_sesw_c_flat_repar = pos_points[:, isw]
+post_ecc_c_flat_repar = post_secw_c_flat_repar**2 + post_sesw_c_flat_repar**2
+map_ecc_c_repar = post_ecc_c_flat_repar[idx_map_nautilus]
+
+credint = [anc.hpd(post_ecc_c_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("e_c", map_ecc_c_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_c_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+post_argp_c_flat_repar = np.arctan2(post_sesw_c_flat_repar, post_secw_c_flat_repar)*cst.rad2deg
+map_argp_c_repar = post_argp_c_flat_repar[idx_map_nautilus]
+
+credint = [anc.hpd(post_argp_c_flat_repar, c) for c in perc]
+l = "{:18s}: MAP {:10.6f} ".format("w_c", map_argp_c_repar)
+for j, pc in enumerate(credint):
+    l += "HDI@{:.2f}% [{:10.6f} , {:10.6f}] ".format(perc[j]*100, pc[0], pc[1])
+print(l)
+err_ecc_c_repar = np.ptp(credint[0])*0.5 # semi-interval, but it is not the only solution
+
+print()
+print("This example:")
+print("M_b = {:10.6f} +/- {:10.6f} Mearth".format(map_Mb_Me_repar, err_Mb_Me_repar))
+print("M_c = {:10.6f} +/- {:10.6f} Mearth".format(map_Mc_Me_repar, err_Mc_Me_repar))
+
+print("McKee values:")
+print("M_b = {:10.6f} +/- {:10.6f} Mearth".format(0.0554*cst.Mjups*cst.Msear, 0.0020*cst.Mjups*cst.Msear))
+print("M_c = {:10.6f} +/- {:10.6f} Mearth".format(0.525*cst.Mjups*cst.Msear, 0.019*cst.Mjups*cst.Msear))
+
+# %% [markdown]
+# #### corner plot
+
+# %%
+ticklabel_size = 3
+label_separation = -1.1
+label_size = 4
+k = anc.get_auto_bins(pos_points)
+
+GTC = pygtc.plotGTC(
+    chains=pos_points,
+    paramNames=fit_labels_repar,
+    nContourLevels=3,
+    sigmaContourLevels=True,
+    nBins=k,
+    truths=(mle_points, map_points),
+    truthLabels=("MLE", "MAP"),
+    figureSize=plt.rcParams["figure.figsize"][0],
+    mathTextFontSet=plt.rcParams["mathtext.fontset"],
+    customLabelFont={"family": plt.rcParams["font.family"], "size": label_size},
+    customTickFont={"family": plt.rcParams["font.family"], "size": ticklabel_size},
+    customLegendFont={"family": plt.rcParams["font.family"], "size": label_size},
+    legendMarker='All',
+    labelRotation=(True, False),
+)
+axs = GTC.axes
+for ax in axs:
+    ax.tick_params(
+        direction='inout',
+        pad=4,
+        size=3,
+        labelsize=ticklabel_size
+    )
+    lb = ax.get_xlabel()
+    if lb != "":
+        ax.xaxis.set_label_coords(0.5, label_separation+0.2)
+        ax.set_xlabel(lb, fontsize=label_size, rotation=45.0)
+    
+    lb = ax.get_ylabel()
+    if lb != "":
+        ax.yaxis.set_label_coords(label_separation, 0.5)
+        ax.set_ylabel(lb, fontsize=label_size, rotation=45.0)
+
+    for axis in ['top', 'bottom', 'left', 'right']:
+            ax.spines[axis].set_linewidth(0.6)
+
+plt.show()
+plt.close(GTC)
+
+# %% [markdown]
+# #### O-C plot w/ samples  
+# Let's plot the O-C plot with the samples with shades at different credible intervals.
+
+# %%
+map_transits_nautilus = fitting_to_observables_repar_dict(map_points)
+
+# %%
+(
+    mass_map, 
+    radius_map,
+    period_map, 
+    ecc_map, 
+    argp_map, 
+    meana_map,
+    inc_map,
+    longn_map,
+) = fitting_to_physical_params_repar(map_points)
+print("m ", *mass_map  , "(", *mass, ")")
+print("r ", *radius_map, "(", *radius, ")")
+print("p ", *period_map, "(", *period, ")")
+print("e ", *ecc_map   , "(", *ecc, ")")
+print("w ", *argp_map  , "(", *argp, ")")
+print("ma", *meana_map , "(", *meana, ")")
+print("i ", *inc_map   , "(", *inc, ")")
+print("ln", *longn_map , "(", *longn, ")")
+
+# %%
+t_int_syn = time_sel_end
+
+_, _, _, map_transits_full_nautilus = run_and_get_transits(
+    t_epoch, 
+    t_start, 
+    t_int_syn,
+    mass_map,
+    radius_map,
+    period_map, 
+    ecc_map,
+    argp_map, 
+    meana_map,
+    inc_map,
+    longn_map,
+    body_names[1:],
+)
+
+# %%
+smp_tra = {}
+smp_idx = np.random.choice(n_nautilus, n_samples, replace=False, p=pos_weights)
+for ismp in smp_idx:
+    smp_pars = pos_points[ismp, :]
+    (
+        mass_smp, 
+        radius_smp,
+        period_smp, 
+        ecc_smp, 
+        argp_smp, 
+        meana_smp,
+        inc_smp,
+        longn_smp,
+    ) = fitting_to_physical_params_repar(smp_pars)
+    _, _, _, smp_transits_full = run_and_get_transits(
+        t_epoch, 
+        t_start, 
+        t_int_syn,
+        mass_smp,
+        radius_smp,
+        period_smp, 
+        ecc_smp,
+        argp_smp, 
+        meana_smp,
+        inc_smp,
+        longn_smp,
+        body_names[1:],
+    )
+    smp_tra[ismp] = smp_transits_full
+
+# %%
+fig = plt.figure(figsize=(5,5))
+fig.subplots_adjust(hspace=0.07, wspace=0.25)
+
+c1, c2, c3 = 0.6827, 0.9544, 0.9974
+hc1, hc2, hc3 = c1*0.5, c2*0.5, c3*0.5
+
+lfont = 8
+tfont = 6
+
+zo_map = 10
+zo_obs = zo_map-1
+zo_mod = zo_obs -1
+zo_1s = zo_mod - 1
+zo_2s = zo_1s - 1
+zo_3s = zo_2s - 1
+
+cfsm = plt.get_cmap("gray")
+gval = 0.6
+dg = 0.1
+
+axs = []
+nrows = 6 # (2 + 1) * 2
+ncols = 1
+
+u = [1.0, "days"]
+markers = anc.filled_markers
+
+all_xlims = []
+
+# =================================================================
+i, pl_letter = 0, "b"
+print("planet {}".format(pl_letter))
+
+ax = plt.subplot2grid((nrows, ncols), (0, 0), rowspan=2)
+poc.set_axis_default(ax, ticklabel_size=tfont, aspect="auto", labeldown=False)
+ax.set_ylabel("O-C ({:s})".format(u[1]), fontsize=lfont)
+ax.axhline(0, color="k", lw=0.8)
+
+(Tref_b, Pref_b) = lineph_syn_noisy[pl_letter]
+_, _, chi2_b, epoch_b, Tlin_b, oc_b= linear_ephemeris(
+    tra_syn_noisy_b, eT0s=err_tra_syn_b, Tref_in = Tref_b, Pref_in = Pref_b, fit=False
+)
+print("Tref_b: {:12.6f} Pref_b: {:12.6f}".format(Tref_b[0], Pref_b[0]))
+
+tra_map_b = map_transits_nautilus[pl_letter]["transit_times"]
+epo_map_b = compute_epoch(Tref_b[0], Pref_b[0], tra_map_b)
+tln_map_b = Tref_b[0] + epo_map_b*Pref_b[0]
+oc_map_b = tra_map_b - tln_map_b
+res_map_b = tra_syn_noisy_b - tra_map_b
+
+tra_map_full_b = map_transits_full_nautilus[pl_letter]["transit_times"]
+epo_map_full_b = compute_epoch(Tref_b[0], Pref_b[0], tra_map_full_b)
+tln_map_full_b = Tref_b[0] + epo_map_full_b*Pref_b[0]
+oc_map_full_b = tra_map_full_b - tln_map_full_b
+
+ax.errorbar(
+    tra_syn_noisy_b,
+    oc_b*u[0],
+    yerr=err_tra_syn_b*u[0],
+    marker=markers[0],
+    ms=2.5,
+    mec='None',
+    mew=0.4,
+    color="C0",
+    ecolor="C0",
+    elinewidth=0.4,
+    capsize=0,
+    label="{} (noisy)".format(pl_letter),
+    ls='',
+    zorder=zo_obs
+)
+
+ax.plot(
+    tra_syn_noisy_b,
+    oc_map_b*u[0],
+    color="black",
+    marker=markers[0],
+    ms=2.5,
+    mfc='None',
+    mew=0.4,
+    label="{} (map)".format(pl_letter),
+    ls='',
+    zorder=zo_map
+)
+
+ax.plot(
+    tra_map_full_b,
+    oc_map_full_b*u[0],
+    color="black",
+    marker='o',
+    ms=0.6,
+    ls='-',
+    lw=0.3,
+    label="{} (full map)".format(pl_letter),
+    zorder=zo_mod
+)
+
+oc_smp = []
+for ksmp, vsmp in smp_tra.items():
+    tra_xxx = vsmp[pl_letter]["transit_times"]
+    epo_xxx = compute_epoch(Tref_b[0], Pref_b[0], tra_xxx)
+    tln_xxx = Tref_b[0] + epo_xxx*Pref_b[0]
+    oc_xxx = tra_xxx - tln_xxx
+    oc_smp.append(oc_xxx)
+oc_smp = np.array(oc_smp).T * u[0]
+hdi1 = np.percentile(oc_smp, [50 - (100*hc1), 50 + (100*hc1)], axis=1).T
+hdi2 = np.percentile(oc_smp, [50 - (100*hc2), 50 + (100*hc2)], axis=1).T
+hdi3 = np.percentile(oc_smp, [50 - (100*hc3), 50 + (100*hc3)], axis=1).T
+ax.fill_between(
+    tra_map_full_b,
+    hdi1[:, 0],
+    hdi1[:, 1],
+    color=cfsm(gval),
+    alpha=1.0,
+    lw=0.0,
+    zorder=zo_1s,
+)
+ax.fill_between(
+    tra_map_full_b,
+    hdi2[:, 0],
+    hdi2[:, 1],
+    color=cfsm(gval+dg),
+    alpha=1.0,
+    lw=0.0,
+    zorder=zo_2s,
+)
+ax.fill_between(
+    tra_map_full_b,
+    hdi3[:, 0],
+    hdi3[:, 1],
+    color=cfsm(gval+(dg*2)),
+    alpha=1.0,
+    lw=0.0,
+    zorder=zo_3s,
+)
+
+all_xlims.append(ax.get_xlim())
+
+axs.append(ax)
+
+# ---
+ax = plt.subplot2grid((nrows, ncols), (2, 0), rowspan=1)
+poc.set_axis_default(ax, ticklabel_size=tfont, aspect="auto", labeldown=False)
+ax.set_ylabel("res. ({:s})".format(u[1]), fontsize=lfont)
+ax.axhline(0, color="k", lw=0.8)
+
+ax.errorbar(
+    tra_syn_noisy_b,
+    res_map_b*u[0],
+    yerr=err_tra_syn_b*u[0],
+    marker=markers[0],
+    ms=2.5,
+    mec='black',
+    mew=0.4,
+    color="C0",
+    ecolor="C0",
+    elinewidth=0.4,
+    capsize=0,
+    # label="{} (noisy)".format(pl_letter),
+    ls='',
+    zorder=zo_obs
+)
+
+axs.append(ax)
+
+# =================================================================
+i, pl_letter = 1, "c"
+print("planet {}".format(pl_letter))
+ax = plt.subplot2grid((nrows, ncols), (3, 0), rowspan=2)
+poc.set_axis_default(ax, ticklabel_size=tfont, aspect="auto", labeldown=False)
+ax.set_ylabel("O-C ({:s})".format(u[1]), fontsize=lfont)
+ax.axhline(0, color="k", lw=0.8)
+
+(Tref_c, Pref_c) = lineph_syn_noisy[pl_letter]
+_, _, chi2_c, epoch_c, Tlin_c, oc_c= linear_ephemeris(
+    tra_syn_noisy_c, eT0s=err_tra_syn_c, Tref_in = Tref_c, Pref_in = Pref_c, fit=False
+)
+print("Tref_c: {:12.6f} Pref_c: {:12.6f}".format(Tref_c[0], Pref_c[0]))
+
+tra_map_c = map_transits_nautilus[pl_letter]["transit_times"]
+epo_map_c = compute_epoch(Tref_c[0], Pref_c[0], tra_map_c)
+tln_map_c = Tref_c[0] + epo_map_c*Pref_c[0]
+oc_map_c = tra_map_c - tln_map_c
+res_map_c = tra_syn_noisy_c - tra_map_c
+
+tra_map_full_c = map_transits_full_nautilus[pl_letter]["transit_times"]
+epo_map_full_c = compute_epoch(Tref_c[0], Pref_c[0], tra_map_full_c)
+tln_map_full_c = Tref_c[0] + epo_map_full_c*Pref_c[0]
+oc_map_full_c = tra_map_full_c - tln_map_full_c
+
+ax.errorbar(
+    tra_syn_noisy_c,
+    oc_c*u[0],
+    yerr=err_tra_syn_c*u[0],
+    marker=markers[1],
+    ms=2.5,
+    mec='None',
+    mew=0.4,
+    color="C1",
+    ecolor="C1",
+    elinewidth=0.4,
+    capsize=0,
+    label="{} (noisy)".format(pl_letter),
+    ls='',
+    zorder=zo_obs
+)
+
+ax.plot(
+    tra_syn_noisy_c,
+    oc_map_c*u[0],
+    color="black",
+    marker=markers[1],
+    ms=2.5,
+    mfc='None',
+    mew=0.4,
+    label="{} (map)".format(pl_letter),
+    ls='',
+    zorder=zo_map
+)
+
+ax.plot(
+    tra_map_full_c,
+    oc_map_full_c*u[0],
+    color="black",
+    marker='o',
+    ms=0.6,
+    ls='-',
+    lw=0.3,
+    label="{} (full map)".format(pl_letter),
+    zorder=zo_mod
+)
+
+oc_smp = []
+for ksmp, vsmp in smp_tra.items():
+    tra_xxx = vsmp[pl_letter]["transit_times"]
+    epo_xxx = compute_epoch(Tref_c[0], Pref_c[0], tra_xxx)
+    tln_xxx = Tref_c[0] + epo_xxx*Pref_c[0]
+    oc_xxx = tra_xxx - tln_xxx
+    oc_smp.append(oc_xxx)
+oc_smp = np.array(oc_smp).T * u[0]
+hdi1 = np.percentile(oc_smp, [50 - (100*hc1), 50 + (100*hc1)], axis=1).T
+hdi2 = np.percentile(oc_smp, [50 - (100*hc2), 50 + (100*hc2)], axis=1).T
+hdi3 = np.percentile(oc_smp, [50 - (100*hc3), 50 + (100*hc3)], axis=1).T
+ax.fill_between(
+    tra_map_full_c,
+    hdi1[:, 0],
+    hdi1[:, 1],
+    color=cfsm(gval),
+    alpha=1.0,
+    lw=0.0,
+    zorder=zo_1s,
+)
+ax.fill_between(
+    tra_map_full_c,
+    hdi2[:, 0],
+    hdi2[:, 1],
+    color=cfsm(gval+dg),
+    alpha=1.0,
+    lw=0.0,
+    zorder=zo_2s,
+)
+ax.fill_between(
+    tra_map_full_c,
+    hdi3[:, 0],
+    hdi3[:, 1],
+    color=cfsm(gval+(dg*2)),
+    alpha=1.0,
+    lw=0.0,
+    zorder=zo_3s,
+)
+
+all_xlims.append(ax.get_xlim())
+
+axs.append(ax)
+
+# ---
+ax = plt.subplot2grid((nrows, ncols), (5, 0), rowspan=1)
+poc.set_axis_default(ax, ticklabel_size=tfont, aspect="auto", labeldown=True)
+ax.set_ylabel("res. ({:s})".format(u[1]), fontsize=lfont)
+ax.axhline(0, color="k", lw=0.8)
+
+ax.errorbar(
+    tra_syn_noisy_c,
+    res_map_c*u[0],
+    yerr=err_tra_syn_c*u[0],
+    marker=markers[1],
+    ms=2.5,
+    mec='black',
+    mew=0.4,
+    color="C1",
+    ecolor="C1",
+    elinewidth=0.4,
+    capsize=0,
+    ls='',
+    zorder=zo_obs
+)
+
+axs.append(ax)
+
+all_xlims = np.concatenate(all_xlims)
+for ax in axs:
+    ax.set_xlim(np.min(all_xlims), np.max(all_xlims))
+    ax.legend(loc='center left', bbox_to_anchor =(1.01, 0.5), fontsize=lfont, frameon=False)
+
+ax.set_xlabel("Time (days)")
+
+fig.align_ylabels(axs)
+
+plt.show()
+
+plt.close(fig)
+
+# %%
+
+
+# %%
 
 
 
