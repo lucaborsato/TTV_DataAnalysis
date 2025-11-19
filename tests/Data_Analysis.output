@@ -1,0 +1,246 @@
+figure.figsize [5.0, 5.0]
+planet b (id 2) with 291 transits in 5000 days of integration
+planet c (id 3) with 145 transits in 5000 days of integration
+planet b (id 2) with 291 transits in 5000 days of integration
+planet c (id 3) with 145 transits in 5000 days of integration
+planet b
+trades       : Tref = 2495.46865 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6652
+rebound      : Tref = 2495.46865 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6653
+TTVFast      : Tref = 2495.46861 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6652
+planet c
+trades       : Tref = 2490.34650 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+rebound      : Tref = 2490.34650 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+TTVFast      : Tref = 2490.34645 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+planet b
+trades       : Tref = 2495.46865 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6652
+planet c
+trades       : Tref = 2490.34650 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+rebound      : Tref = 2495.56116 +/- 0.09314, Pref = 17.22003 +/- 0.00111 with chi^2 = 729.60 ==> chi^2_reduce = 2.5246
+rebound      : Tref = 2490.28033 +/- 0.02148, Pref = 34.50059 +/- 0.00051 with chi^2 = 9.57 ==> chi^2_reduce = 0.0669
+rebound      : Tref = 2495.08495 +/- 0.09840, Pref = 17.21435 +/- 0.00117 with chi^2 = 814.25 ==> chi^2_reduce = 2.8175
+rebound      : Tref = 2490.65562 +/- 0.02240, Pref = 34.50225 +/- 0.00054 with chi^2 = 10.41 ==> chi^2_reduce = 0.0728
+rebound      : Tref = 2495.34273 +/- 0.09258, Pref = 17.22006 +/- 0.00110 with chi^2 = 720.88 ==> chi^2_reduce = 2.4944
+rebound      : Tref = 2490.93847 +/- 0.02256, Pref = 34.50017 +/- 0.00054 with chi^2 = 10.55 ==> chi^2_reduce = 0.0738
+planet b
+trades       : Tref = 2495.46865 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6652
+planet c
+trades       : Tref = 2490.34650 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+rebound      : Tref = 2495.47612 +/- 0.09563, Pref = 17.21898 +/- 0.00114 with chi^2 = 769.13 ==> chi^2_reduce = 2.6614
+rebound      : Tref = 2495.46497 +/- 0.09564, Pref = 17.21889 +/- 0.00114 with chi^2 = 769.27 ==> chi^2_reduce = 2.6618
+rebound      : Tref = 2495.47849 +/- 0.09580, Pref = 17.21904 +/- 0.00114 with chi^2 = 771.85 ==> chi^2_reduce = 2.6708
+rebound      : Tref = 2490.34506 +/- 0.02202, Pref = 34.50087 +/- 0.00053 with chi^2 = 10.06 ==> chi^2_reduce = 0.0703
+rebound      : Tref = 2495.51622 +/- 0.09610, Pref = 17.21941 +/- 0.00114 with chi^2 = 776.71 ==> chi^2_reduce = 2.6876
+planet b
+trades       : Tref = 2495.46865 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6652
+planet c
+trades       : Tref = 2490.34650 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+rebound      : Tref = 2500.22543 +/- 0.13702, Pref = 17.22043 +/- 0.00163 with chi^2 = 1578.96 ==> chi^2_reduce = 5.4635
+rebound      : Tref = 2477.56814 +/- 0.03181, Pref = 34.50176 +/- 0.00076 with chi^2 = 20.97 ==> chi^2_reduce = 0.1466
+rebound      : Tref = 2495.51610 +/- 0.20121, Pref = 17.24346 +/- 0.00240 with chi^2 = 3404.88 ==> chi^2_reduce = 11.7816
+rebound      : Tref = 2505.25132 +/- 0.04781, Pref = 34.50729 +/- 0.00114 with chi^2 = 47.39 ==> chi^2_reduce = 0.3314
+rebound      : Tref = 2498.87284 +/- 0.27529, Pref = 17.21382 +/- 0.00327 with chi^2 = 6373.28 ==> chi^2_reduce = 22.0529
+rebound      : Tref = 2495.55176 +/- 0.03191, Pref = 34.50912 +/- 0.00076 with chi^2 = 21.11 ==> chi^2_reduce = 0.1476
+rebound      : Tref = 2493.93496 +/- 0.19690, Pref = 17.23329 +/- 0.00234 with chi^2 = 3260.59 ==> chi^2_reduce = 11.2823
+rebound      : Tref = 2486.49322 +/- 0.04678, Pref = 34.48620 +/- 0.00112 with chi^2 = 45.37 ==> chi^2_reduce = 0.3173
+planet b
+trades       : Tref = 2495.46865 +/- 0.09570, Pref = 17.21893 +/- 0.00114 with chi^2 = 770.26 ==> chi^2_reduce = 2.6652
+planet c
+trades       : Tref = 2490.34650 +/- 0.02199, Pref = 34.50089 +/- 0.00053 with chi^2 = 10.03 ==> chi^2_reduce = 0.0701
+rebound      : Tref = 2497.19312 +/- 0.00853, Pref = 17.10480 +/- 0.00010 with chi^2 = 6.20 ==> chi^2_reduce = 0.0213
+rebound      : Tref = 2505.94397 +/- 0.33883, Pref = 34.20184 +/- 0.00804 with chi^2 = 2413.30 ==> chi^2_reduce = 16.7590
+rebound      : Tref = 2504.84079 +/- 0.07367, Pref = 17.16411 +/- 0.00087 with chi^2 = 459.63 ==> chi^2_reduce = 1.5849
+rebound      : Tref = 2513.70616 +/- 0.17018, Pref = 34.32737 +/- 0.00404 with chi^2 = 608.79 ==> chi^2_reduce = 4.2277
+rebound      : Tref = 2495.45769 +/- 0.09997, Pref = 17.22106 +/- 0.00119 with chi^2 = 840.41 ==> chi^2_reduce = 2.9080
+rebound      : Tref = 2488.36550 +/- 0.04116, Pref = 34.47067 +/- 0.00098 with chi^2 = 35.13 ==> chi^2_reduce = 0.2457
+rebound      : Tref = 2492.22813 +/- 0.08260, Pref = 17.19314 +/- 0.00098 with chi^2 = 573.74 ==> chi^2_reduce = 1.9853
+rebound      : Tref = 2491.83162 +/- 0.01015, Pref = 34.52361 +/- 0.00024 with chi^2 = 2.13 ==> chi^2_reduce = 0.0149
+planet b
+input: Tref =  1344.2357673285703 Pref =  17.16073
+synthetic    : Tref = 1342.66786 +/- 0.43974, Pref = 17.23500 +/- 0.01095 with chi^2 = 43.81 ==> chi^2_reduce = 2.4341
+input: Tref =  1344.241400856791 Pref =  17.16073
+noisy        : Tref = 1342.77242 +/- 0.00077, Pref = 17.24290 +/- 0.00002 with chi^2 = 6263465.65 ==> chi^2_reduce = 347970.3140
+planet c
+input: Tref =  178.7268974784858 Pref =  34.525528
+synthetic    : Tref = 178.87763 +/- 0.13590, Pref = 34.49649 +/- 0.00491 with chi^2 = 0.55 ==> chi^2_reduce = 0.0689
+input: Tref =  178.72726044720545 Pref =  34.525528
+noisy        : Tref = 178.88354 +/- 0.00031, Pref = 34.49701 +/- 0.00001 with chi^2 = 1476378.69 ==> chi^2_reduce = 184547.3361
+Number of fitting parameters = 10
+fit_pars_initial
+M_b/M_star M_c/M_star P_b P_c e_b e_c w_b w_c meana_b meana_c
+6.932565028377982e-05 0.0006569669025087438 17.0988 34.5508 0.1593 0.009 292.0 236.0 150.18 152.29999999999995
+mass (Msun)    =  0.763 5.2895471166524004e-05 0.0005012657466141715
+radius (Rsun)  =  0.757 0.07184567664367815 0.09246465272126436
+period (days)  =  0.0 17.0988 34.5508
+ecc            =  0.0 0.1593 0.009
+arg. peri. (°) =  0.0 292.0 236.0
+mean anom. (°) =  0.0 150.18 152.29999999999995
+inc (°)        =  0.0 88.554 89.801
+long. node (°) =  0.0 0.0 359.2
+check boundaries - fitting pars within boundaries? True
+logP =  21.23204687665375
+fit_pars_test
+M_b/M_star M_c/M_star P_b P_c e_b e_c w_b w_c meana_b meana_c
+0.00012956538921887406 0.0009233321355187462 16.619752011731567 35.34527304872915 0.18837485809483567 0.16811087216722653 162.49552937114387 302.4918299740973 44.31677194385987 195.48943273693385
+mass (Msun)    =  0.763 9.885839197400091e-05 0.0007045024194008033
+radius (Rsun)  =  0.757 0.07184567664367815 0.09246465272126436
+period (days)  =  0.0 16.619752011731567 35.34527304872915
+ecc            =  0.0 0.18837485809483567 0.16811087216722653
+arg. peri. (°) =  0.0 162.49552937114387 302.4918299740973
+mean anom. (°) =  0.0 44.31677194385987 195.48943273693385
+inc (°)        =  0.0 88.554 89.801
+long. node (°) =  0.0 0.0 359.2
+check boundaries - fitting pars within boundaries? True
+logP =  -23485070127.44914
+planet b
+planet c
+number of the population = 40
+number of the generation = 5000
+number of the threads = 40
+seed = 42
+M_b/M_star 6.932565028377982e-05 5.776060031384295e-05
+M_c/M_star 0.0006569669025087438 0.0005601747455405077
+P_b 17.0988 17.1221517607121
+P_c 34.5508 34.541147485261476
+e_b 0.1593 0.15118248823588049
+e_c 0.009 0.05026583318873716
+w_b 292.0 299.1877625602136
+w_c 236.0 221.05107445757272
+meana_b 150.18 144.07552062810424
+meana_c 152.29999999999995 170.76840957436937
+lnP 21.23204687665375 -2878.2017452694586
+planet b
+planet c
+M_b/M_star  : MAP   0.000068 HDI@68.27% [  0.000069 ,   0.000071] HDI@95.44% [  0.000068 ,   0.000072] HDI@99.74% [  0.000067 ,   0.000072] 
+M_c/M_star  : MAP   0.000648 HDI@68.27% [  0.000652 ,   0.000677] HDI@95.44% [  0.000642 ,   0.000681] HDI@99.74% [  0.000637 ,   0.000684] 
+P_b         : MAP  17.099349 HDI@68.27% [ 17.098348 ,  17.099394] HDI@95.44% [ 17.097900 ,  17.099987] HDI@99.74% [ 17.097472 ,  17.100434] 
+P_c         : MAP  34.550492 HDI@68.27% [ 34.550569 ,  34.551060] HDI@95.44% [ 34.550239 ,  34.551185] HDI@99.74% [ 34.550025 ,  34.551420] 
+e_b         : MAP   0.158348 HDI@68.27% [  0.158395 ,   0.161635] HDI@95.44% [  0.157540 ,   0.162629] HDI@99.74% [  0.156731 ,   0.163107] 
+e_c         : MAP   0.011184 HDI@68.27% [  0.004435 ,   0.009974] HDI@95.44% [  0.003778 ,   0.012883] HDI@99.74% [  0.003012 ,   0.014204] 
+w_b         : MAP 292.402423 HDI@68.27% [291.348712 , 292.413278] HDI@95.44% [290.870440 , 292.800727] HDI@99.74% [290.575716 , 293.152739] 
+w_c         : MAP 238.254508 HDI@68.27% [226.302516 , 240.275229] HDI@95.44% [214.522333 , 243.078384] HDI@99.74% [208.168564 , 244.544909] 
+meana_b     : MAP 149.650477 HDI@68.27% [149.628592 , 150.876985] HDI@95.44% [149.235514 , 151.557372] HDI@99.74% [148.735685 , 151.905512] 
+meana_c     : MAP 150.122714 HDI@68.27% [148.379471 , 162.200700] HDI@95.44% [145.334463 , 173.789502] HDI@99.74% [143.750534 , 179.998041] 
+
+M_b         : MAP  17.346028 HDI@68.27% [ 17.176905 ,  18.321979] HDI@95.44% [ 16.617973 ,  18.887549] HDI@99.74% [ 16.043096 ,  19.377235] 
+M_c         : MAP 164.726021 HDI@68.27% [162.903680 , 173.690149] HDI@95.44% [157.700301 , 179.112357] HDI@99.74% [152.198945 , 183.723807] 
+
+This example:
+M_b =  17.346028 +/-   0.572537 Mearth
+M_c = 164.726021 +/-   5.393235 Mearth
+McKee values:
+M_b =  17.611338 +/-   0.635788 Mearth
+M_c = 166.894450 +/-   6.039990 Mearth
+### n_steps, n_walkers, n_par = 1000, 40, 10
+Parameter M_b/M_star
+integrated_ACF  [69.66452787]
+acf_len         70
+n_expected      3500
+ACF 70x10 expected chain long as n = 3500x10 (current 1000 steps)
+expected_steps[ipar]  3500
+expected_acf[ipar]  70
+acf_steps  [  35  142  249  357  464  571  678  786  893 1000]
+Parameter M_c/M_star
+integrated_ACF  [70.183614]
+acf_len         70
+n_expected      3500
+ACF 70x10 expected chain long as n = 3500x10 (current 1000 steps)
+expected_steps[ipar]  3500
+expected_acf[ipar]  70
+acf_steps  [  35  142  249  357  464  571  678  786  893 1000]
+Parameter P_b
+integrated_ACF  [43.00578827]
+acf_len         43
+n_expected      2150
+ACF 43x10 expected chain long as n = 2150x10 (current 1000 steps)
+expected_steps[ipar]  2150
+expected_acf[ipar]  43
+acf_steps  [  21  130  239  347  456  565  674  782  891 1000]
+Parameter P_c
+integrated_ACF  [47.40702803]
+acf_len         47
+n_expected      2350
+ACF 47x10 expected chain long as n = 2350x10 (current 1000 steps)
+expected_steps[ipar]  2350
+expected_acf[ipar]  47
+acf_steps  [  23  132  240  349  457  566  674  783  891 1000]
+Parameter e_b
+integrated_ACF  [69.5927285]
+acf_len         70
+n_expected      3500
+ACF 70x10 expected chain long as n = 3500x10 (current 1000 steps)
+expected_steps[ipar]  3500
+expected_acf[ipar]  70
+acf_steps  [  35  142  249  357  464  571  678  786  893 1000]
+Parameter e_c
+integrated_ACF  [65.4923404]
+acf_len         65
+n_expected      3250
+ACF 65x10 expected chain long as n = 3250x10 (current 1000 steps)
+expected_steps[ipar]  3250
+expected_acf[ipar]  65
+acf_steps  [  32  140  247  355  462  570  677  785  892 1000]
+Parameter w_b
+integrated_ACF  [69.54074279]
+acf_len         70
+n_expected      3500
+ACF 70x10 expected chain long as n = 3500x10 (current 1000 steps)
+expected_steps[ipar]  3500
+expected_acf[ipar]  70
+acf_steps  [  35  142  249  357  464  571  678  786  893 1000]
+Parameter w_c
+integrated_ACF  [64.00675351]
+acf_len         64
+n_expected      3200
+ACF 64x10 expected chain long as n = 3200x10 (current 1000 steps)
+expected_steps[ipar]  3200
+expected_acf[ipar]  64
+acf_steps  [  32  140  247  355  462  570  677  785  892 1000]
+Parameter meana_b
+integrated_ACF  [69.95790632]
+acf_len         70
+n_expected      3500
+ACF 70x10 expected chain long as n = 3500x10 (current 1000 steps)
+expected_steps[ipar]  3500
+expected_acf[ipar]  70
+acf_steps  [  35  142  249  357  464  571  678  786  893 1000]
+Parameter meana_c
+integrated_ACF  [64.17351183]
+acf_len         64
+n_expected      3200
+ACF 64x10 expected chain long as n = 3200x10 (current 1000 steps)
+expected_steps[ipar]  3200
+expected_acf[ipar]  64
+acf_steps  [  32  140  247  355  462  570  677  785  892 1000]
+planet b (id 2) with 20 transits in 5000 days of integration
+planet c (id 3) with 10 transits in 5000 days of integration
+m  0.763 5.20986164728991e-05 0.0004947528921902149 ( 0.763 5.2895471166524e-05 0.0005012657466141715 )
+r  0.757 0.07184567664367815 0.09246465272126436 ( 0.757 0.07184567664367815 0.09246465272126436 )
+p  0.0 17.099349302291134 34.550491971013194 ( 0.0 17.0988 34.5508 )
+e  0.0 0.15834792134087616 0.011183538768031045 ( 0.0 0.1593 0.009 )
+w  0.0 292.40242316689574 238.2545081883753 ( 0.0 292.0 236.0 )
+ma 0.0 149.65047739805638 150.12271388121854 ( 0.0 150.18 152.29999999999995 )
+i  0.0 88.554 89.801 ( 0.0 88.554 89.801 )
+ln 0.0 0.0 359.2 ( 0.0 0.0 359.2 )
+planet b
+Tref_b:  1342.772423 Pref_b:    17.242901
+planet c
+Tref_c:   178.883540 Pref_c:    34.497009
+Number of fitting parameters = 11
+fit_pars_repar_test
+M_star log10(M_b/M_star) log10(M_c/M_b) P_b P_c secosw_b sesinw_b secosw_c sesinw_c meanl_b meanl_c
+0.763 -4.159106047991244 0.9766495386775272 17.0988 34.5508 0.1495144973005174 -0.3700613666636569 -0.053049696791107034 -0.07864940985393093 82.18 27.5
+mass (Msun)    =  0.763 5.2895471166524044e-05 0.000501265746614172
+radius (Rsun)  =  0.757 0.07184567664367815 0.09246465272126436
+period (days)  =  0.0 17.0988 34.5508
+ecc            =  0.0 0.15929999999999994 0.009
+arg. peri. (°) =  0.0 292.0 236.00000000000003
+mean anom. (°) =  0.0 67.92135059014606 206.98000000000002
+inc (°)        =  0.0 88.554 89.801
+long. node (°) =  0.0 0.0 359.2
+check boundaries - fitting pars within boundaries? True
+logP =  -12261290565497.277
+Is it stable? True
+number of the population = 44
+number of the generation = 5000
+number of the threads = 44
+seed = 42

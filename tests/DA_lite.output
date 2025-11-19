@@ -1,0 +1,37 @@
+
+ 107 transits of planet b in 1826.25 days
+  53 transits of planet c in 1826.25 days
+planet b
+input: Tref =  1344.2394252392107 Pref =  17.16073
+noisy        : Tref = 1342.77192 +/- 0.00077, Pref = 17.24311 +/- 0.00002 with chi^2 = 6279073.19 ==> chi^2_reduce = 348837.3993
+planet c
+input: Tref =  178.7272093016158 Pref =  34.525528
+noisy        : Tref = 178.88464 +/- 0.00031, Pref = 34.49657 +/- 0.00001 with chi^2 = 1501948.11 ==> chi^2_reduce = 187743.5143
+
+
+Data info - just loaded transits
+Number of RV observations:     0
+Number of RV datasets:     0
+Number of T0 observations:    30
+Number of Dur observations:     0
+
+
+FITTING OBSERVABLES - DEFAULT
+planet b (id 2) with 20 transits in 1826 days of integration
+planet c (id 3) with 10 transits in 1826 days of integration
+Time to fit observables: 0.07 s
+
+RUN AND GET TRANSITS TRADES - DEFAULT
+planet b (id 2) with 107 transits in 1826 days of integration
+planet c (id 3) with 53 transits in 1826 days of integration
+Time to run and get transits trades: 0.09 s
+
+FITTING OBSERVABLES - MAP
+planet b (id 2) with 20 transits in 1826 days of integration
+planet c (id 3) with 10 transits in 1826 days of integration
+Time to fit observables: 0.07 s
+
+RUN AND GET TRANSITS TRADES - MAP
+planet b (id 2) with 107 transits in 1826 days of integration
+planet c (id 3) with 53 transits in 1826 days of integration
+Time to run and get transits trades: 0.09 s
