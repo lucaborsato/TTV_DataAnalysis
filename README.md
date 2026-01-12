@@ -4,8 +4,7 @@ author: Luca Borsato
 email: luca.borsato AT inaf.it  
 
 This repository contains the [notebook](./Data_Analysis.ipynb) used to create the **Data Analysis Section 4.4**
-of the **Chapter 4 'Transit Timing Variation'** of the book **'Exoplanet Detection Methods: Uncovering the Evolution of Planetary Systems'**
-to be published by [Elsevier](https://www.elsevier.com/).
+of the **Chapter 4 'Transit Timing Variation'** of the book **'Exoplanet Detection Methods: Uncovering the Evolution of Planetary Systems'** to be published by [Elsevier](https://www.elsevier.com/) within the serie **'Space and Planetary Advances'**.  
 
 In the repository you will find the following files:  
 
